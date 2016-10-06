@@ -82,7 +82,7 @@ class HrefSearcher {
     }
 
     /**
-     * 判断连接是否合法，合法返回true，否则为false
+     * 判断连接是否合法，合法返回true，否则为false(利用引用顺带过滤)
      * @param type $href
      * @return boolean
      */
@@ -90,7 +90,7 @@ class HrefSearcher {
 
         if (strpos($href, "http") === FALSE) {
 
-            /* 判断是否可能是简洁路径 */
+            /* 判断是否可能是简洁路径,若是php和asp等动态不在考虑内，防止对方服务器爆炸 */
             if (strpos($href, "html") !== FALSE || strpos($href, "htm") !== FALSE) {
                 $curr_href = $this->curr_href;
                 $domain = array();
@@ -116,6 +116,27 @@ class HrefSearcher {
                         $href = $domain . '/' . $href;
                     }
                 }
+
+                /* href中/../目录回退过滤 */
+                $explode_href_array = explode('/', $href);
+                while (in_array('..', $explode_href_array)) {
+                    for ($i = 0; $i < count($explode_href_array); $i++) {
+                        if ($explode_href_array[$i] == '..') {
+                            unset($explode_href_array[$i]);
+                            unset($explode_href_array[$i - 1]);
+                            $explode_href_array = array_values($explode_href_array);
+                            break;
+                        }
+                    }
+                }
+                $href = '';
+                for ($i = 0; $i < count($explode_href_array); $i++) {
+                    if ($i != count($explode_href_array) - 1) {
+                        $href.=$explode_href_array[$i] . '/';
+                    } else {
+                        $href.=$explode_href_array[$i];
+                    }
+                }
             } else {
                 /* 无用href */
                 return 0;
@@ -127,7 +148,7 @@ class HrefSearcher {
             return 0;
         }
 
-        /* href满足字符串过滤条件 */
+        /* href满足字符串策略过滤条件 */
         $flag = false;
         if (!$this->filter_array) {
             $query = "select * from search_filter "
