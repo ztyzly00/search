@@ -179,7 +179,7 @@ class HrefSearcher {
     public function getCurrHref() {
 
         /* 获取当前需要抓取的href */
-        $query = "select * from search_href "
+        $query = "select href from search_href "
                 . "where status=0 and strategy_id=$this->strategy_id "
                 . "order by priority desc limit 1";
         $curr_href = $this->mysql_obj->fetch_assoc_one($query);
@@ -212,14 +212,17 @@ class HrefSearcher {
 
         $crawler = $this->client->request('GET', $curr_href);
 
-        /* 添加当前网页的所有抓取内容 */
-        $do = addslashes($crawler->getContent());
-        $do = WebUtils::toUtf8($do);
-        $query = "update search_href set content='$do' where href='$curr_href'";
-        $this->mysql_obj->exec_query($query);
+        /* 添加当前网页的所有抓取内容,即整个document的内容,可以跟下面的合并 */
+//        $do = addslashes($crawler->getContent());
+//        $do = WebUtils::toUtf8($do);
+//        $query = "update search_href set content='$do' where href='$curr_href'";
+//        $this->mysql_obj->exec_query($query);
 
-        /* 添加新闻网页的新闻内容 */
-
+        /* 分类添加新闻网页的新闻内容,title等内容 */
+//        $p_content = call_user_func(array($this->getStrategy(), 'getPContent'), $crawler);
+//        $title = call_user_func(array($this->getStrategy(), 'getTitle'), $crawler);
+//        $query = "update search_href set pcontent='$p_content',title='$title' where href='$curr_href'";
+//        $this->mysql_obj->exec_query($query);
 
         /* 添加网页中的所有连接 */
         $nodes = $crawler->filter('a')->getNodes();
@@ -229,7 +232,7 @@ class HrefSearcher {
 
     public function Grab() {
 
-        /* 大量操作数据库前 */
+        /* 大量操作数据库前,获取当前抓取的连接 */
         $curr_href = $this->getCurrHref();
 
         /* 预先标记已经抓取，防止并发的重复性 */
@@ -251,6 +254,13 @@ class HrefSearcher {
         while (true) {
             $this->Grab();
         }
+    }
+
+    public function getStrategy() {
+        $query = "select strategy from search_strategy where strategy_id = $this->strategy_id limit 1";
+        $strategy_name = $this->mysql_obj->fetch_assoc_one($query);
+        $strategy_name = $strategy_name['strategy'];
+        return "Model\\SpiderStrategy\\" . $strategy_name . "Strategy";
     }
 
 }

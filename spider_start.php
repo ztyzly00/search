@@ -3,7 +3,7 @@
 set_time_limit(0);
 ignore_user_abort(true);
 
-$pid_num = 200;
+$pid_num = 50;
 
 $strategy_id = $argv[1];
 
