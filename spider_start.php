@@ -1,0 +1,28 @@
+<?php
+
+set_time_limit(0);
+ignore_user_abort(true);
+
+$pid_num = 200;
+
+$strategy_id = $argv[1];
+
+if (!(isset($argv[1]))) {
+    echo "没写参数" . "\n";
+    exit();
+}
+
+while (1) {
+    $q = exec('ps -ef|grep "spider.php ' . $strategy_id . '"|wc|cut -c 5-10');
+    $q = trim($q);
+    if ($q < $pid_num) {
+        $loop_count = $pid_num - $q;
+        for ($i = 0; $i < $loop_count; $i++) {
+            exec("php /opt/cli/search/spider.php " . $strategy_id . " > /dev/null &");
+        }
+    }
+
+    sleep(1);
+}
+
+
