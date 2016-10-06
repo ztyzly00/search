@@ -62,6 +62,7 @@ class HrefSearcher {
         foreach ($nodes as $node) {
             $href = $node->getAttribute('href');
 
+            /* 判断合法性并进行href的过滤整合 */
             if (!$this->isHrefLegal($href)) {
                 continue;
             }
@@ -83,6 +84,7 @@ class HrefSearcher {
 
     /**
      * 判断连接是否合法，合法返回true，否则为false(利用引用顺带过滤)
+     * 高频运算（有待算法优化）(一秒大概4w左右的频率)
      * @param type $href
      * @return boolean
      */
@@ -97,6 +99,7 @@ class HrefSearcher {
                 preg_match_all('/http:\/\/[^\/]*/', $this->curr_href, $domain);
                 /* 根域名 */
                 $domain = $domain[0][0];
+
                 if (substr($href, 0, 1) == '/') {
                     /* 当前路径为绝对路径 */
                     $href = $domain . $href;
@@ -143,12 +146,12 @@ class HrefSearcher {
             }
         }
 
-        /* href过长过滤 */
+        /* href过长过滤,数据库href唯一键值最长190 */
         if (strlen($href) >= 190) {
             return 0;
         }
 
-        /* href满足字符串策略过滤条件 */
+        /* href满足字符串策略过滤条件,策略根据策略id记录在数据库中 */
         $flag = false;
         if (!$this->filter_array) {
             $query = "select * from search_filter "
@@ -169,7 +172,7 @@ class HrefSearcher {
     }
 
     /**
-     * 当前抓取href获取策略 
+     * 当前抓取href获取策略 ， 采用热度优先搜索(根据连接的重复性判断优先级)
      * @return type
      */
     public function getCurrHref() {
