@@ -87,26 +87,63 @@ class HrefSearcher {
      * @return boolean
      */
     public function isHrefLegal(&$href) {
-        if (strpos($href, "http") !== FALSE && strlen($href) < 190) {
-            $flag = false;
 
-            if (!$this->filter_array) {
-                $query = "select * from search_filter "
-                        . "where strategy_id=$this->strategy_id";
-                $this->filter_array = $this->mysql_obj->fetch_assoc($query);
-            }
-            $filter_array = $this->filter_array;
-            for ($i = 0; $i < count($filter_array); $i++) {
-                if (strpos($href, $filter_array[$i]['string']) !== FALSE) {
-                    $flag = true;
+        if (strpos($href, "http") === FALSE) {
+
+            /* 判断是否可能是简洁路径 */
+            if (strpos($href, "html") !== FALSE || strpos($href, "htm") !== FALSE) {
+                $curr_href = $this->curr_href;
+                $domain = array();
+                preg_match_all('/http:\/\/[^\/]*/', $this->curr_href, $domain);
+                /* 根域名 */
+                $domain = $domain[0][0];
+                if (substr($href, 0, 1) == '/') {
+                    /* 当前路径为绝对路径 */
+                    $href = $domain . $href;
+                } else {
+                    /* 当前路径为相对路径 */
+                    $explode_array = explode('/', $this->curr_href);
+                    $last_string = $explode_array[count($explode_array) - 1];
+                    if ($last_string) {
+                        $domain_without_http = str_replace("http://", " ", $domain);
+                        $domain_without_http = trim($domain_without_http);
+                        if ($last_string == $domain_without_http) {
+                            $href = $domain . '/' . $href;
+                        } else {
+                            $href = str_replace($last_string, $href, $curr_href);
+                        }
+                    } else {
+                        $href = $domain . '/' . $href;
+                    }
                 }
+            } else {
+                /* 无用href */
+                return 0;
             }
-            if ($flag) {
-                return 1;
-            }
-        } else {
+        }
+
+        /* href过长过滤 */
+        if (strlen($href) >= 190) {
             return 0;
         }
+
+        /* href满足字符串过滤条件 */
+        $flag = false;
+        if (!$this->filter_array) {
+            $query = "select * from search_filter "
+                    . "where strategy_id=$this->strategy_id";
+            $this->filter_array = $this->mysql_obj->fetch_assoc($query);
+        }
+        $filter_array = $this->filter_array;
+        for ($i = 0; $i < count($filter_array); $i++) {
+            if (strpos($href, $filter_array[$i]['string']) !== FALSE) {
+                $flag = true;
+            }
+        }
+        if ($flag) {
+            return 1;
+        }
+
         return 0;
     }
 
@@ -160,7 +197,8 @@ class HrefSearcher {
 
         /* 添加网页中的所有连接 */
         $nodes = $crawler->filter('a')->getNodes();
-        $this->mysql_obj->exec_query($this->getInsertQuery($nodes, $curr_href));
+        $query = $this->getInsertQuery($nodes, $curr_href);
+        $this->mysql_obj->exec_query($query);
     }
 
     public function Grab() {
