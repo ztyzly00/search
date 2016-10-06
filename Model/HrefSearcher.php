@@ -3,6 +3,7 @@
 namespace Model;
 
 use Core\MySql\Mysql_Model\XmMysqlObj;
+use Model\Utils\WebUtils;
 use Goutte\Client;
 
 /**
@@ -213,6 +214,7 @@ class HrefSearcher {
 
         /* 添加当前网页的所有抓取内容 */
         $do = addslashes($crawler->getContent());
+        $do = WebUtils::toUtf8($do);
         $query = "update search_href set content='$do' where href='$curr_href'";
         $this->mysql_obj->exec_query($query);
 
