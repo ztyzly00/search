@@ -212,17 +212,21 @@ class HrefSearcher {
 
         $crawler = $this->client->request('GET', $curr_href);
 
-        /* 添加当前网页的所有抓取内容,即整个document的内容,可以跟下面的合并 */
+        /* 添加当前网页的所有抓取内容,即整个document的内容,可以跟下面的合并,最好用mongodb存储*/
 //        $do = addslashes($crawler->getContent());
 //        $do = WebUtils::toUtf8($do);
 //        $query = "update search_href set content='$do' where href='$curr_href'";
 //        $this->mysql_obj->exec_query($query);
 
         /* 分类添加新闻网页的新闻内容,title等内容 */
-//        $p_content = call_user_func(array($this->getStrategy(), 'getPContent'), $crawler);
-//        $title = call_user_func(array($this->getStrategy(), 'getTitle'), $crawler);
-//        $query = "update search_href set pcontent='$p_content',title='$title' where href='$curr_href'";
-//        $this->mysql_obj->exec_query($query);
+        $p_content = call_user_func(array($this->getStrategy(), 'getPContent'), $crawler);
+        $title = call_user_func(array($this->getStrategy(), 'getTitle'), $crawler);
+        $p_content = WebUtils::toUtf8($p_content);
+        $p_content = addslashes($p_content);
+        $title = WebUtils::toUtf8($title);
+        $query = "update search_href set title='$title',pcontent='$p_content' where href='$curr_href'";
+        $this->mysql_obj->exec_query($query);
+
 
         /* 添加网页中的所有连接 */
         $nodes = $crawler->filter('a')->getNodes();

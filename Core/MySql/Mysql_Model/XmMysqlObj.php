@@ -34,7 +34,7 @@ class XmMysqlObj implements Mysql_Interface\iMySqlObj {
     }
 
     public function exec_query($query) {
-        mysqli_query($this->link, $query);
+        return mysqli_query($this->link, $query);
     }
 
     public function fetch_array($query) {
