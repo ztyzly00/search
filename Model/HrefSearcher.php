@@ -7,7 +7,18 @@ use Model\Utils\WebUtils;
 use Goutte\Client;
 
 /**
+ * author：镇天宇
+ * 
  * href连接爬虫，适合并发大量拉取带有过滤条件href
+ * 
+ * 性能问题:
+ *      初期磁盘压力过大造成php等待mysql响应，造成cpu浪费在mysql网络阻塞上
+ *      后期update变多，insert变少，逐渐演变成抓取的带宽瓶颈，但是同样会造成cpu的网络阻塞
+ * 建议：
+ *      若可以采用python抓取更好，应该使用epoll维持响应，Goutte会造成阻塞
+ *      数据库建议采用Mongodb或者hbase，用mysql维持关系性，采用redis维持href重复列表
+ *      IsHrefLegal函数是高频调用，在确定php的cpu计算压力过大时，优先优化此函数。
+ *      在ssd硬盘上效果更好，但是抓取速度主要限制在网络带宽上
  */
 class HrefSearcher {
 
@@ -212,7 +223,7 @@ class HrefSearcher {
 
         $crawler = $this->client->request('GET', $curr_href);
 
-        /* 添加当前网页的所有抓取内容,即整个document的内容,可以跟下面的合并,最好用mongodb存储*/
+        /* 添加当前网页的所有抓取内容,即整个document的内容,可以跟下面的合并,最好用mongodb存储 */
 //        $do = addslashes($crawler->getContent());
 //        $do = WebUtils::toUtf8($do);
 //        $query = "update search_href set content='$do' where href='$curr_href'";
@@ -253,6 +264,9 @@ class HrefSearcher {
         $this->grabHref($curr_href);
     }
 
+    /**
+     * 抓取循环
+     */
     public function startGrab() {
 
         while (true) {
@@ -260,6 +274,10 @@ class HrefSearcher {
         }
     }
 
+    /**
+     * 获取调用策略
+     * @return type
+     */
     public function getStrategy() {
         $query = "select strategy from search_strategy where strategy_id = $this->strategy_id limit 1";
         $strategy_name = $this->mysql_obj->fetch_assoc_one($query);
