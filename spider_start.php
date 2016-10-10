@@ -18,7 +18,7 @@ while (1) {
     if ($q < $pid_num) {
         $loop_count = $pid_num - $q;
         for ($i = 0; $i < $loop_count; $i++) {
-            exec("php /opt/cli/search/spider.php " . $strategy_id . " > /dev/null &");
+            exec("php " . __DIR__ . "/spider.php " . $strategy_id . " > /dev/null &");
         }
     }
 
