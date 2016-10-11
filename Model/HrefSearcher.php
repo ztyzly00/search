@@ -15,10 +15,11 @@ use Goutte\Client;
  *      初期磁盘压力过大造成php等待mysql响应，造成cpu浪费在mysql网络阻塞上
  *      后期update变多，insert变少，逐渐演变成抓取的带宽瓶颈，但是同样会造成cpu的网络阻塞
  * 建议：
- *      若可以采用python抓取更好，应该使用epoll维持响应，Goutte会造成阻塞
+ *      若可以采用python抓取更好，应该使用epoll维持响应，Goutte库会造成阻塞
  *      数据库建议采用Mongodb或者hbase，用mysql维持关系性，采用redis维持href重复列表
+ *      优先优化mysql，尽量减少表索引数量，但要保证select的迅速响应。（目前time索引没有必要，但暂时保留）
  *      IsHrefLegal函数是高频调用，在确定php的cpu计算压力过大时，优先优化此函数。
- *      在ssd硬盘上效果更好，但是抓取速度主要限制在网络带宽上
+ *      在ssd硬盘上效果更好，但是抓取速度也限制在网络带宽上
  */
 class HrefSearcher {
 
@@ -163,6 +164,9 @@ class HrefSearcher {
             return 0;
         }
 
+        /* 最后href去空 */
+        $href = trim($href);
+
         /* href满足字符串策略过滤条件,策略根据策略id记录在数据库中 */
         $flag = false;
         if (!$this->filter_array) {
@@ -176,6 +180,7 @@ class HrefSearcher {
                 $flag = true;
             }
         }
+
         if ($flag) {
             return 1;
         }
@@ -239,7 +244,7 @@ class HrefSearcher {
         $this->mysql_obj->exec_query($query);
 
 
-        /* 添加网页中的所有连接 */
+        /* 添加网页中的所有连接,用于下一步的抓取 */
         $nodes = $crawler->filter('a')->getNodes();
         $query = $this->getInsertQuery($nodes, $curr_href);
         $this->mysql_obj->exec_query($query);
@@ -255,8 +260,24 @@ class HrefSearcher {
 
         /* 操作失败回退 */
         register_shutdown_function(function() {
+            /* 标记码回退 */
             $this->markHref($this->curr_href, 0);
-            $query = "update search_href set priority=0 where href='$this->curr_href'";
+
+            $query = "select priority from search_href where href='$this->curr_href'";
+            $priority_raw = $this->mysql_obj->fetch_assoc_one($query);
+            $priority = $priority_raw['priority'];
+
+            /*
+             * 抓取到最后会产生priority差异不明显，造成cpu空循环压力大 
+             * 但是前期不适合递减，要最大速度化先抓取未抓取的。
+             * 也可以前期递减，在充足时间下的全站抓取可以使用。
+             */
+            if ($priority <= 0) {
+                $query = "update search_href set priority=priority-1 where href='$this->curr_href'";
+            } else {
+                $query = "update search_href set priority=0 where href='$this->curr_href'";
+            }
+
             $this->mysql_obj->exec_query($query);
         });
 

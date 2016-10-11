@@ -1074,6 +1074,14 @@ class Crawler implements \Countable, \IteratorAggregate {
         return $crawler;
     }
 
+    public function getChildren() {
+        $children = array();
+        for ($i = 0; $i < $this->count(); $i++) {
+            $children[] = $this->getChild($i);
+        }
+        return $children;
+    }
+
     public function getNodes() {
         return $this->nodes;
     }
