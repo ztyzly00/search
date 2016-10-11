@@ -12,6 +12,7 @@ use Goutte\Client;
  * href连接爬虫，适合并发大量拉取带有过滤条件href
  * 
  * 性能问题:
+ *      磁盘压力过大，大量的小文件块读写，机械硬盘iops跟不上(带宽只能卡在140m左右徘徊)
  *      初期磁盘压力过大造成php等待mysql响应，造成cpu浪费在mysql网络阻塞上
  *      后期update变多，insert变少，逐渐演变成抓取的带宽瓶颈，但是同样会造成cpu的网络阻塞
  * 建议：
@@ -19,7 +20,7 @@ use Goutte\Client;
  *      数据库建议采用Mongodb或者hbase，用mysql维持关系性，采用redis维持href重复列表
  *      优先优化mysql，尽量减少表索引数量，但要保证select的迅速响应。（目前time索引没有必要，但暂时保留）
  *      IsHrefLegal函数是高频调用，在确定php的cpu计算压力过大时，优先优化此函数。
- *      在ssd硬盘上效果更好，但是抓取速度也限制在网络带宽上
+ *      在ssd硬盘上效果更好（实验100m带宽完全占满，io完全不会瓶颈），但是抓取速度也限制在网络带宽上
  */
 class HrefSearcher {
 

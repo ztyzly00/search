@@ -3,12 +3,13 @@
 set_time_limit(0);
 ignore_user_abort(true);
 
+/* 线程数 */
 $pid_num = 50;
 
 $strategy_id = $argv[1];
 
 if (!(isset($argv[1]))) {
-    echo "没写参数" . "\n";
+    echo "没写参数，参数值为策略id" . "\n";
     exit();
 }
 
