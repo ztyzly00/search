@@ -210,6 +210,9 @@ class HrefSearcher {
         } else {
             $curr_href = $curr_href['href'];
         }
+
+        $curr_href = addslashes($curr_href);
+
         /* 赋值给属性，用于回退操作 */
         $this->curr_href = $curr_href;
 
@@ -263,6 +266,7 @@ class HrefSearcher {
 
         /* 操作失败回退 */
         register_shutdown_function(function() {
+
             /* 标记码回退 */
             $this->markHref($this->curr_href, 0);
 
