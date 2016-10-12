@@ -3,6 +3,7 @@
 namespace Model;
 
 use Core\MySql\Mysql_Model\XmMysqlObj;
+use Core\Redis\RedisFactory;
 use Model\Utils\WebUtils;
 use Goutte\Client;
 
@@ -12,18 +13,20 @@ use Goutte\Client;
  * href连接爬虫，适合并发大量拉取带有过滤条件href
  * 
  * 性能问题:
- *      初期磁盘压力过大，大量的小文件块读写，机械硬盘iops跟不上(带宽只能卡在60m左右徘徊)
- *      初期磁盘压力过大造成php等待mysql响应，造成cpu浪费在mysql网络阻塞上
- *      后期update变多，insert变少，逐渐演变成抓取的带宽瓶颈，但是同样会造成cpu的网络阻塞
+ *      初期磁盘压力过大，大量的小文件块读写，机械硬盘iops跟不上(带宽只能卡在60m左右徘徊) (已解决!350mbps带宽已完全占满)
+ *      初期磁盘压力过大造成php等待mysql响应，造成cpu浪费在mysql网络阻塞上 (已解决)
+ *      后期update变多，insert变少，逐渐演变成抓取的带宽瓶颈，但是同样会造成cpu的网络阻塞（已解决）
  * 建议：
  *      针对初期磁盘压力过大，很大一部分原因是热度优先所搜导致硬盘读取，
  *          ->若热度优先搜索用redis代替则可以让抓取瓶颈变为带宽，但是redis没有想到好的解决方案
+ *          (已解决！！！利用Redis set去重href，list来维护待抓取href，但不是热度优先搜索，变成广度优先了
+ *           但是同样能抓遍全站数据，下一步需要考虑的是Redis状态码的回退问题，不过带宽顺利占满300m，io没有压力)
  * 
- *      若可以采用python抓取更好，应该使用epoll维持响应，Goutte库会造成阻塞
- *      数据库建议采用Mongodb或者hbase，用mysql维持关系性，采用redis维持href去重列表（不依靠mysql的唯一键）
- *      优先优化mysql，尽量减少表索引数量，但要保证select的迅速响应。（目前time索引没有必要，但暂时保留）
- *      IsHrefLegal函数是高频调用，在确定php的cpu计算压力过大时，优先优化此函数。
- *      在ssd硬盘上效果更好（实验100m带宽完全占满，io完全不会瓶颈），但是抓取速度也限制在网络带宽上
+ *      若可以采用python抓取更好，应该使用epoll维持响应，Goutte库会造成响应阻塞（需要用多进程弥补）
+ *      数据库建议采用Mongodb或者hbase，用mysql维持关系性，采用redis维持href去重列表（不依靠mysql的唯一键） (已解决,Mongodb暂时不需要)
+ *      优先优化mysql，尽量减少表索引数量，但要保证select的迅速响应。（目前time索引没有必要，但暂时保留） (利用了Redis删除了三个索引，只留一个href唯一索引)（已解决）
+ *      IsHrefLegal函数是高频调用，在确定php的cpu计算压力过大时，优先优化此函数。(待优化，一个进程8%的单核逻辑cpu左右)
+ *      在ssd硬盘上效果更好，但是抓取速度也限制在网络带宽上 (已解决)
  */
 class HrefSearcher {
 
@@ -52,6 +55,12 @@ class HrefSearcher {
     private $mysql_obj;
 
     /**
+     * Redis句柄
+     * @var type 
+     */
+    private $redis_obj;
+
+    /**
      * Goutte实例
      * @var type 
      */
@@ -64,6 +73,7 @@ class HrefSearcher {
     public function __construct($strategy_id) {
         $this->strategy_id = $strategy_id;
         $this->mysql_obj = XmMysqlObj::getInstance();
+        $this->redis_obj = RedisFactory::createRedisInstance();
         $this->client = new Client();
     }
 
@@ -77,6 +87,7 @@ class HrefSearcher {
         $query = '';
         $time = time();
         foreach ($nodes as $node) {
+
             $href = $node->getAttribute('href');
 
             /* 判断合法性并进行href的过滤整合 */
@@ -84,18 +95,30 @@ class HrefSearcher {
                 continue;
             }
 
-            if (!$query) {
-                $query = "insert into search_href "
-                        . "(`href`,`from_href`,`strategy_id`,`time`,`num`,`status`) "
-                        . "values "
-                        . "('$href','$from_href','$this->strategy_id',$time,1,0)";
+            $href = addslashes($href);
+
+            /* 利用Redis Set去重 */
+            if ($this->redis_obj->sAdd('unique_href_set', $href)) {
+
+                /* 将href推入队列 */
+                $this->redis_obj->sAdd('spider_href_set_' . $this->strategy_id, $href);
+                if (!$query) {
+                    $query = "insert into search_href "
+                            . "(`href`,`from_href`,`strategy_id`,`time`,`num`,`status`) "
+                            . "values "
+                            . "('$href','$from_href','$this->strategy_id',$time,1,0)";
+                } else {
+                    $query.=",('$href','$from_href','$this->strategy_id',$time,1,0)";
+                }
             } else {
-                $query.=",('$href','$from_href','$this->strategy_id',$time,1,0)";
+                /* 可以做热度的叠加，后期再考虑 */
             }
         }
 
-        /* 重复数据将num+1，优先值也加1 */
-        $query.=" ON duplicate KEY UPDATE num=num+1,priority=priority+1";
+        /* 重复数据将num+1，优先值也加1(作废，后期再修改) */
+        if ($query) {
+            $query.=" ON duplicate KEY UPDATE num=num+1,priority=priority+1";
+        }
         return $query;
     }
 
@@ -200,18 +223,13 @@ class HrefSearcher {
      */
     public function getCurrHref() {
 
-        /* 获取当前需要抓取的href */
-        $query = "select href from search_href "
-                . "where status=0 and strategy_id=$this->strategy_id "
-                . "order by priority desc limit 1";
-        $curr_href = $this->mysql_obj->fetch_assoc_one($query);
+        /* 获取当前需要抓取的href 利用redis队列弹出 */
+        $curr_href = $this->redis_obj->sPop('spider_href_set_' . $this->strategy_id);
 
-        if (!count($curr_href)) {
+        if (!$curr_href) {
             /* 取策略的最初href */
             $href = $this->mysql_obj->fetch_assoc_one("select href from search_orgin where strategy_id=$this->strategy_id limit 1");
             $curr_href = $href['href'];
-        } else {
-            $curr_href = $curr_href['href'];
         }
 
         $curr_href = addslashes($curr_href);
@@ -223,26 +241,11 @@ class HrefSearcher {
     }
 
     /**
-     * 标记已经抓取过href
+     * 处理并记录相应的一些内容
+     * @param type $crawler
      * @param type $curr_href
      */
-    public function markHref($curr_href, $status) {
-        /* 标识抓取过的不再抓取 */
-        $query = "update search_href set status=$status where href='$curr_href'";
-        $this->mysql_obj->exec_query($query);
-        return $curr_href;
-    }
-
-    public function grabHref($curr_href) {
-
-        $crawler = $this->client->request('GET', $curr_href);
-
-        /* 添加当前网页的所有抓取内容,即整个document的内容,可以跟下面的合并,最好用mongodb存储 */
-//        $do = addslashes($crawler->getContent());
-//        $do = WebUtils::toUtf8($do);
-//        $query = "update search_href set content='$do' where href='$curr_href'";
-//        $this->mysql_obj->exec_query($query);
-
+    public function recordInfo($crawler, $curr_href) {
         /* 分类添加新闻网页的新闻内容,title等内容 */
         $p_content = call_user_func(array($this->getStrategy(), 'getPContent'), $crawler);
         $title = call_user_func(array($this->getStrategy(), 'getTitle'), $crawler);
@@ -251,7 +254,13 @@ class HrefSearcher {
         $title = WebUtils::toUtf8($title);
         $query = "update search_href set title='$title',pcontent='$p_content' where href='$curr_href'";
         $this->mysql_obj->exec_query($query);
+    }
 
+    public function grabHref($curr_href) {
+
+        $crawler = $this->client->request('GET', $curr_href);
+
+        $this->recordInfo($crawler, $curr_href);
 
         /* 添加网页中的所有连接,用于下一步的抓取 */
         $nodes = $crawler->filter('a')->getNodes();
@@ -264,31 +273,9 @@ class HrefSearcher {
         /* 大量操作数据库前,获取当前抓取的连接 */
         $curr_href = $this->getCurrHref();
 
-        /* 预先标记已经抓取，防止并发的重复性 */
-        $this->markHref($curr_href, 1);
-
         /* 操作失败回退 */
         register_shutdown_function(function() {
-
-            /* 标记码回退 */
-            $this->markHref($this->curr_href, 0);
-
-            $query = "select priority from search_href where href='$this->curr_href'";
-            $priority_raw = $this->mysql_obj->fetch_assoc_one($query);
-            $priority = $priority_raw['priority'];
-
-            /*
-             * 抓取到最后会产生priority差异不明显，造成cpu空循环压力大 
-             * 但是前期不适合递减，要最大速度化先抓取未抓取的。
-             * 也可以前期递减，在充足时间下的全站抓取可以使用。
-             */
-            if ($priority <= 0) {
-                $query = "update search_href set priority=priority-1 where href='$this->curr_href'";
-            } else {
-                $query = "update search_href set priority=0 where href='$this->curr_href'";
-            }
-
-            $this->mysql_obj->exec_query($query);
+            $this->redis_obj->sAdd('spider_href_set_' . $this->strategy_id, $this->curr_href);
         });
 
         /* 大量数据库操作 大概1秒左右响应（包括爬虫的href抓取） */

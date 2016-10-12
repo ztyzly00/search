@@ -1,14 +1,22 @@
 <?php
 
 require_once 'vendor/autoload.php';
+require_once 'autoload.php';
 
 use Goutte\Client;
+use Core\Redis\RedisFactory;
 
-$client = new Client();
-$crawler = $client->request('GET', "http://www.dmoz.org/Computers/Programming/Languages/Python/Books/");
+//$client = new Client();
+//$crawler = $client->request('GET', "http://www.dmoz.org/Computers/Programming/Languages/Python/Books/");
+//
+//$nodes = $crawler->filter("#site-list-content > .site-item > .title-and-desc")->getChildren();
+//
+//foreach($nodes as $node){
+//    print_r($node->html());
+//}
 
-$nodes = $crawler->filter("#site-list-content > .site-item > .title-and-desc")->getChildren();
+$redis_obj = RedisFactory::createRedisInstance();
 
-foreach($nodes as $node){
-    print_r($node->html());
+for ($i = 0; $i < 10000; $i++) {
+    $redis_obj->set("zty", "zly");
 }
