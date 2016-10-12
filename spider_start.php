@@ -4,7 +4,7 @@ set_time_limit(0);
 ignore_user_abort(true);
 
 /* 线程数 */
-$pid_num = 50;
+$pid_num = 70;
 
 $strategy_id = $argv[1];
 

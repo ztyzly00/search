@@ -12,7 +12,7 @@ use Goutte\Client;
  * href连接爬虫，适合并发大量拉取带有过滤条件href
  * 
  * 性能问题:
- *      磁盘压力过大，大量的小文件块读写，机械硬盘iops跟不上(带宽只能卡在140m左右徘徊)
+ *      初期磁盘压力过大，大量的小文件块读写，机械硬盘iops跟不上(带宽只能卡在140m左右徘徊)
  *      初期磁盘压力过大造成php等待mysql响应，造成cpu浪费在mysql网络阻塞上
  *      后期update变多，insert变少，逐渐演变成抓取的带宽瓶颈，但是同样会造成cpu的网络阻塞
  * 建议：
@@ -165,9 +165,6 @@ class HrefSearcher {
             return 0;
         }
 
-        /* 最后href去空 */
-        $href = trim($href);
-
         /* href满足字符串策略过滤条件,策略根据策略id记录在数据库中 */
         $flag = false;
         if (!$this->filter_array) {
@@ -183,6 +180,11 @@ class HrefSearcher {
         }
 
         if ($flag) {
+            /* 最后的href处理放这边
+             * 最后href去空，转义字符加反斜杠 */
+            $href = trim($href);
+            $href = addslashes($href);
+
             return 1;
         }
 
