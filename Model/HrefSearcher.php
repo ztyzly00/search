@@ -26,11 +26,14 @@ use Goutte\Client;
  *           机械硬盘的机械特性在同时读取和写入时造成io严重堵塞。（解决办法为更换SSD硬盘或者是其他nosql数据库,无需维护索引的数据库。）
  *           目测解决还需一些类似于mongodb的文档数据库存储网页数据】
  *               ->【削减mysql所需数据量，让mysql的表数据小于innodb_buffer_pool_size的大小,大量字符串用mongodb存储】
- * 
+ *               ->【mongodb建立索引后同样很慢，磁盘瓶颈主要体现在整个内容的插入，应该舍弃部分内容的插入】
  * 
  *      若可以采用python抓取更好，应该使用epoll维持响应，Goutte库会造成响应阻塞（需要用多进程弥补）
  *      数据库建议采用Mongodb或者hbase，用mysql维持关系性，采用redis维持href去重列表（不依靠mysql的唯一键） (已解决,Mongodb暂时不需要)
- *      优先优化mysql，尽量减少表索引数量，但要保证select的迅速响应。（目前time索引没有必要，但暂时保留） (利用了Redis删除了三个索引，只留一个href唯一索引)（已解决）
+ *      优先优化mysql，尽量减少表索引数量，但要保证select的迅速响应。（目前time索引没有必要，但暂时保留） 
+ *           ->  利用了Redis删除了三个索引，只留一个href唯一索引)（已解决）
+ *           ->  分表，href唯一索引也删除，用redis来保证唯一性
+ * 
  *      IsHrefLegal函数是高频调用，在确定php的cpu计算压力过大时，优先优化此函数。(待优化，一个进程8%的单核逻辑cpu左右)
  *      在ssd硬盘上效果更好，但是抓取速度也限制在网络带宽上 (已解决)
  */
@@ -90,8 +93,9 @@ class HrefSearcher {
      * @return string
      */
     public function getInsertQuery($nodes, $from_href) {
+
         $query = '';
-        $time = time();
+
         foreach ($nodes as $node) {
 
             $href = $node->getAttribute('href');
@@ -110,20 +114,15 @@ class HrefSearcher {
                 $this->redis_obj->sAdd('spider_href_set_' . $this->strategy_id, $href);
                 if (!$query) {
                     $query = "insert into search_href "
-                            . "(`href`,`from_href`,`strategy_id`,`time`,`num`,`status`) "
+                            . "(`href`,`from_href`,`strategy_id`,`num`,`status`) "
                             . "values "
-                            . "('$href','$from_href','$this->strategy_id',$time,1,0)";
+                            . "('$href','$from_href','$this->strategy_id',1,0)";
                 } else {
-                    $query.=",('$href','$from_href','$this->strategy_id',$time,1,0)";
+                    $query.=",('$href','$from_href','$this->strategy_id',1,0)";
                 }
             } else {
                 /* 可以做热度的叠加，后期再考虑 */
             }
-        }
-
-        /* 重复数据将num+1，优先值也加1(作废，后期再修改) */
-        if ($query) {
-            $query.=" ON duplicate KEY UPDATE num=num+1,priority=priority+1";
         }
         return $query;
     }
@@ -135,6 +134,11 @@ class HrefSearcher {
      * @return boolean
      */
     public function isHrefLegal(&$href) {
+
+        /* 关键字符包含过滤 */
+        if (strpos($href, "#") || strpos($href, "?")) {
+            return 0;
+        }
 
         if (strpos($href, "http") === FALSE) {
 
@@ -253,13 +257,22 @@ class HrefSearcher {
      */
     public function recordInfo($crawler, $curr_href) {
         /* 分类添加新闻网页的新闻内容,title等内容 */
+        $content = addslashes($crawler->getContent());
+        $content = WebUtils::toUtf8($content);
         $p_content = call_user_func(array($this->getStrategy(), 'getPContent'), $crawler);
         $title = call_user_func(array($this->getStrategy(), 'getTitle'), $crawler);
         $p_content = WebUtils::toUtf8($p_content);
         $p_content = addslashes($p_content);
         $title = WebUtils::toUtf8($title);
-        $query = "update search_href set title='$title',pcontent='$p_content' where href='$curr_href'";
-        $this->mysql_obj->exec_query($query);
+
+        if ($title) {
+            /* 记录到内容表中 */
+            $query = "insert into search_content (`title`) values ('$title')";
+            $this->mysql_obj->exec_query($query);
+            $content_id = \mysqli_insert_id($this->mysql_obj->get_link());
+            $update_query = "update search_href set status=1,contentid=$content_id where href='$curr_href'";
+            $this->mysql_obj->exec_query($update_query);
+        }
     }
 
     public function grabHref($curr_href) {
@@ -271,7 +284,9 @@ class HrefSearcher {
         /* 添加网页中的所有连接,用于下一步的抓取 */
         $nodes = $crawler->filter('a')->getNodes();
         $query = $this->getInsertQuery($nodes, $curr_href);
-        $this->mysql_obj->exec_query($query);
+        if ($query) {
+            $this->mysql_obj->exec_query($query);
+        }
     }
 
     public function Grab() {

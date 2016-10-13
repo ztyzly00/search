@@ -89,4 +89,8 @@ class XmMysqlObj implements Mysql_Interface\iMySqlObj {
         }
     }
 
+    public function get_link() {
+        return $this->link;
+    }
+
 }

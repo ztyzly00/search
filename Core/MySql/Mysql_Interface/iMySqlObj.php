@@ -38,4 +38,6 @@ interface iMySqlObj {
      * 获取结果集的个数
      */
     public function num_rows($query);
+    
+    public function get_link();
 }
