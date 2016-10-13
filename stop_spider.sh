@@ -1,4 +1,3 @@
 #!/bin/bash
 
-
-/root/killall.sh spider
+ps -ef | grep spider | grep -v grep | cut -c 9-15 | xargs kill
