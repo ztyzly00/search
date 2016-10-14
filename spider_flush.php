@@ -12,4 +12,4 @@ $redis_obj = RedisFactory::createRedisInstance();
 $redis_obj->flushall();
 $mysql_obj->exec_query("delete from search_href");
 $mysql_obj->exec_query("delete from search_content");
-
+$mysql_obj->exec_query("update search_count set hrefcount=0,contentcount=0");

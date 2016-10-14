@@ -26,7 +26,9 @@ use Goutte\Client;
  *           机械硬盘的机械特性在同时读取和写入时造成io严重堵塞。（解决办法为更换SSD硬盘或者是其他nosql数据库,无需维护索引的数据库。）
  *           目测解决还需一些类似于mongodb的文档数据库存储网页数据】
  *               ->【削减mysql所需数据量，让mysql的表数据小于innodb_buffer_pool_size的大小,大量字符串用mongodb存储】
- *               ->【mongodb建立索引后同样很慢，磁盘瓶颈主要体现在整个内容的插入，应该舍弃部分内容的插入】
+ *               ->【mongodb建立索引后同样很慢，磁盘瓶颈主要体现在整个document内容的插入，应该舍弃部分内容,提取精华内容插入】
+ *               ->【解决办法，扩大innodb所需内存（暂时性），无索引的关系表分离，防止内存与硬盘做太多io交互】（已解决）
+ * 
  * 
  *      若可以采用python抓取更好，应该使用epoll维持响应，Goutte库会造成响应阻塞（需要用多进程弥补）
  *      数据库建议采用Mongodb或者hbase，用mysql维持关系性，采用redis维持href去重列表（不依靠mysql的唯一键） (已解决,Mongodb暂时不需要)
@@ -95,6 +97,7 @@ class HrefSearcher {
     public function getInsertQuery($nodes, $from_href) {
 
         $query = '';
+        $href_count = 0;
 
         foreach ($nodes as $node) {
 
@@ -109,7 +112,7 @@ class HrefSearcher {
 
             /* 利用Redis Set去重 */
             if ($this->redis_obj->sAdd('unique_href_set', $href)) {
-
+                $href_count++;
                 /* 将href推入队列 */
                 $this->redis_obj->sAdd('spider_href_set_' . $this->strategy_id, $href);
                 if (!$query) {
@@ -124,6 +127,12 @@ class HrefSearcher {
                 /* 可以做热度的叠加，后期再考虑 */
             }
         }
+
+        if ($href_count) {
+            $exec_query = "update search_count set hrefcount=hrefcount+$href_count";
+            $this->mysql_obj->exec_query($exec_query);
+        }
+
         return $query;
     }
 
@@ -267,11 +276,15 @@ class HrefSearcher {
 
         if ($title) {
             /* 记录到内容表中 */
-            $query = "insert into search_content (`title`) values ('$title')";
+//            $query = "insert into search_content (`title`) values ('$title')";
+            $query = "insert into search_content (`title`,`pcontent`) values ('$title','$p_content')";
+//            $query = "insert into search_content (`title`,`pcontent`,`content`) values ('$title','$p_content','$content')";
             $this->mysql_obj->exec_query($query);
             $content_id = \mysqli_insert_id($this->mysql_obj->get_link());
             $update_query = "update search_href set status=1,contentid=$content_id where href='$curr_href'";
             $this->mysql_obj->exec_query($update_query);
+            $exec_query = "update search_count set contentcount=contentcount+1";
+            $this->mysql_obj->exec_query($exec_query);
         }
     }
 
