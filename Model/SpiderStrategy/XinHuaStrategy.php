@@ -11,6 +11,10 @@ class XinHuaStrategy extends Strategy {
         $p_content = '';
         if ($crawler->filter('#content')->getNode(0)) {
             $p_content = $crawler->filter('#content')->html();
+            return $p_content;
+        }
+        if ($crawler->filter('.article')->count()) {
+            return $crawler->filter('.article')->html();
         }
         return $p_content;
     }
@@ -20,7 +24,7 @@ class XinHuaStrategy extends Strategy {
         if ($crawler->filter('#title')->getNode(0)) {
             $title = $crawler->filter('#title')->html();
         }
-        print_r($title);
+//        print_r($title);
         return $title;
     }
 

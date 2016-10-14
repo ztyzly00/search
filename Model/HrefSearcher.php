@@ -27,7 +27,7 @@ use Goutte\Client;
  *           目测解决还需一些类似于mongodb的文档数据库存储网页数据】
  *               ->【削减mysql所需数据量，让mysql的表数据小于innodb_buffer_pool_size的大小,大量字符串用mongodb存储】
  *               ->【mongodb建立索引后同样很慢，磁盘瓶颈主要体现在整个document内容的插入，应该舍弃部分内容,提取精华内容插入】
- *               ->【解决办法，扩大innodb所需内存（暂时性），无索引的关系表分离，防止内存与硬盘做太多io交互】（已解决）
+ *               ->【解决办法，扩大innodb_buffer_pool_size（暂时性），无索引的关系表分离，防止内存与硬盘做太多io交互】（已解决）
  * 
  * 
  *      若可以采用python抓取更好，应该使用epoll维持响应，Goutte库会造成响应阻塞（需要用多进程弥补）
