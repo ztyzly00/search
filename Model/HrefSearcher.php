@@ -16,6 +16,9 @@ use Goutte\Client;
  *      初期磁盘压力过大，大量的小文件块读写，机械硬盘iops跟不上(带宽只能卡在60m左右徘徊) (已解决，350mbps带宽已完全占满)
  *      初期磁盘压力过大造成php等待mysql响应，造成cpu浪费在mysql网络阻塞上 (已解决)
  *      后期update变多，insert变少，逐渐演变成抓取的带宽瓶颈，但是同样会造成cpu的网络阻塞（已解决）
+ *      策略的过于复杂将直接影响cpu的效率(精简各站点Strategy文件的策略,最好先人为判断)
+ *      当多策略同时运行时，大量的redis的存储于计算会导致redis的cpu到顶（redis是单进程应用），然后导致php等待redis，php负载也相应变高
+ * 
  * 建议：
  *      针对初期磁盘压力过大，很大一部分原因是热度优先所搜导致硬盘读取，
  *           ->若热度优先搜索用redis代替则可以让抓取瓶颈变为带宽，但是redis没有想到好的解决方案
@@ -58,6 +61,13 @@ class HrefSearcher {
      * @var type 
      */
     private $filter_array;
+
+    /**
+     * 过滤字符串数组(抛弃过滤)
+     * @var type 
+     */
+    private $filter_array_abandon;
+    private $filter_abandon_flag;
 
     /**
      * 数据库句柄
@@ -224,7 +234,23 @@ class HrefSearcher {
             }
         }
 
-        if ($flag) {
+        $flag_abandon = true;
+        if (!$this->filter_array_abandon && $this->filter_abandon_flag != "close") {
+            $query = "select * from search_filter_abandon "
+                    . "where strategy_id=$this->strategy_id";
+            $this->filter_array_abandon = $this->mysql_obj->fetch_assoc($query);
+            if (!count($this->filter_array_abandon)) {
+                $this->filter_abandon_flag = "close";
+            }
+        }
+        $filter_array_abandon = $this->filter_array_abandon;
+        for ($i = 0; $i < count($filter_array_abandon); $i++) {
+            if (strpos($href, $filter_array_abandon[$i]['string']) !== FALSE) {
+                $flag_abandon = false;
+            }
+        }
+
+        if ($flag && $flag_abandon) {
             /* 最后的href处理放这边
              * 最后href去空，转义字符加反斜杠 */
             $href = trim($href);
@@ -274,7 +300,7 @@ class HrefSearcher {
         $p_content = addslashes($p_content);
         $title = WebUtils::toUtf8($title);
 
-        if ($title) {
+        if ($title && $p_content) {
             /* 记录到内容表中 */
 //            $query = "insert into search_content (`title`) values ('$title')";
             $query = "insert into search_content (`title`,`pcontent`) values ('$title','$p_content')";
