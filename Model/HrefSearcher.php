@@ -225,7 +225,7 @@ class HrefSearcher {
         /* href满足字符串策略过滤条件,策略根据策略id记录在数据库中 */
         $flag = false;
         if (!$this->filter_array) {
-            $query = "select * from search_filter "
+            $query = "select string from search_filter "
                     . "where strategy_id=$this->strategy_id";
             $this->filter_array = $this->mysql_obj->fetch_assoc($query);
         }
@@ -239,7 +239,7 @@ class HrefSearcher {
         /* 需要全局flag判定是否数据库中是否有值，要不会每次都读取数据库 */
         $flag_abandon = true;
         if (!$this->filter_array_abandon && $this->filter_abandon_flag != "close") {
-            $query = "select * from search_filter_abandon "
+            $query = "select string from search_filter_abandon "
                     . "where strategy_id=$this->strategy_id";
             $this->filter_array_abandon = $this->mysql_obj->fetch_assoc($query);
             if (!count($this->filter_array_abandon)) {
