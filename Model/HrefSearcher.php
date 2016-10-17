@@ -18,6 +18,11 @@ use Goutte\Client;
  *      后期update变多，insert变少，逐渐演变成抓取的带宽瓶颈，但是同样会造成cpu的网络阻塞（已解决）
  *      策略的过于复杂将直接影响cpu的效率(精简各站点Strategy文件的策略,最好先人为判断)
  *      当多策略同时运行时，大量的redis的存储于计算会导致redis的cpu到顶（redis是单进程应用），然后导致php等待redis，php负载也相应变高
+ *          ->是搜狐的站点让redis负载变高，将搜狐的策略缩小即可（为何搜狐这么屌？）
+ *      当增大策略的规模时，redis的内存不够用，造成swap，性能急剧下降
+ *          ->还是需要缩小策略的范围。
+ *          ->去重策略修改（原来多一个set去重方案没有必要，将维持待抓取的list改为set，可缩小一半内存）
+ *          ->减小mysql所需内存，将大部分内存留给redis.(mysql的磁盘交互在大量抓取的情况下无法避免，高性能的去重优先交给redis)
  * 
  * 建议：
  *      针对初期磁盘压力过大，很大一部分原因是热度优先所搜导致硬盘读取，
@@ -120,11 +125,8 @@ class HrefSearcher {
 
             $href = addslashes($href);
 
-            /* 利用Redis Set去重 */
-            if ($this->redis_obj->sAdd('unique_href_set', $href)) {
+            if ($this->redis_obj->sAdd('spider_href_set_' . $this->strategy_id, $href)) {
                 $href_count++;
-                /* 将href推入队列 */
-                $this->redis_obj->sAdd('spider_href_set_' . $this->strategy_id, $href);
                 if (!$query) {
                     $query = "insert into search_href "
                             . "(`href`,`from_href`,`strategy_id`,`num`,`status`) "
@@ -234,6 +236,7 @@ class HrefSearcher {
             }
         }
 
+        /* 需要全局flag判定是否数据库中是否有值，要不会每次都读取数据库 */
         $flag_abandon = true;
         if (!$this->filter_array_abandon && $this->filter_abandon_flag != "close") {
             $query = "select * from search_filter_abandon "
@@ -291,24 +294,28 @@ class HrefSearcher {
      * @param type $curr_href
      */
     public function recordInfo($crawler, $curr_href) {
+
         /* 分类添加新闻网页的新闻内容,title等内容 */
-        $content = addslashes($crawler->getContent());
-        $content = WebUtils::toUtf8($content);
+        //$content = addslashes($crawler->getContent());
         $p_content = call_user_func(array($this->getStrategy(), 'getPContent'), $crawler);
         $title = call_user_func(array($this->getStrategy(), 'getTitle'), $crawler);
+
+        /* 字符处理 */
+        //$content = WebUtils::toUtf8($content);
         $p_content = WebUtils::toUtf8($p_content);
         $p_content = addslashes($p_content);
         $title = WebUtils::toUtf8($title);
+        $title = addslashes($title);
 
         if ($title && $p_content) {
             /* 记录到内容表中 */
-//            $query = "insert into search_content (`title`) values ('$title')";
             $query = "insert into search_content (`title`,`pcontent`) values ('$title','$p_content')";
-//            $query = "insert into search_content (`title`,`pcontent`,`content`) values ('$title','$p_content','$content')";
             $this->mysql_obj->exec_query($query);
+
             $content_id = \mysqli_insert_id($this->mysql_obj->get_link());
             $update_query = "update search_href set status=1,contentid=$content_id where href='$curr_href'";
             $this->mysql_obj->exec_query($update_query);
+
             $exec_query = "update search_count set contentcount=contentcount+1";
             $this->mysql_obj->exec_query($exec_query);
         }

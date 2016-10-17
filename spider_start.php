@@ -8,6 +8,7 @@ $pid_num = 70;
 
 $strategy_id = $argv[1];
 
+
 if (!(isset($argv[1]))) {
     echo "没写参数，参数值为策略id" . "\n";
     exit();
