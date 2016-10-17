@@ -1,7 +1,7 @@
 /*
 Navicat MySQL Data Transfer
 
-Source Server         : 192.168.20.2_mariadb@root
+Source Server         : 192.168.20.2_mariadb@webuser
 Source Server Version : 50505
 Source Host           : 192.168.20.2:3306
 Source Database       : scraper
@@ -10,7 +10,7 @@ Target Server Type    : MYSQL
 Target Server Version : 50505
 File Encoding         : 65001
 
-Date: 2016-10-17 10:22:22
+Date: 2016-10-17 14:40:08
 */
 
 SET FOREIGN_KEY_CHECKS=0;
@@ -24,7 +24,7 @@ CREATE TABLE `search_content` (
   `title` varchar(255) DEFAULT NULL,
   `pcontent` mediumtext,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=24100 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=59342 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Records of search_content
@@ -96,9 +96,9 @@ CREATE TABLE `search_href` (
   `num` int(10) NOT NULL DEFAULT '1' COMMENT '出现次数',
   `status` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0代表的是未抓取过的url（现已作废）',
   PRIMARY KEY (`id`),
-  KEY `href` (`href`) USING BTREE,
-  KEY `contentid` (`contentid`)
-) ENGINE=InnoDB AUTO_INCREMENT=607939 DEFAULT CHARSET=utf8mb4;
+  KEY `contentid` (`contentid`),
+  KEY `href` (`href`)
+) ENGINE=InnoDB AUTO_INCREMENT=1490715 DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------
 -- Records of search_href
