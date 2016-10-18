@@ -141,7 +141,7 @@ class HrefSearcher {
         if (strpos($href, "http") === FALSE) {
 
             /* 判断是否可能是简洁路径,若是php和asp等动态不在考虑内，防止对方服务器爆炸 */
-            if (strpos($href, "html") !== FALSE || strpos($href, "htm") !== FALSE) {
+            if (strpos($href, "htm") !== FALSE) {
                 $curr_href = $this->curr_href;
                 $domain = array();
                 preg_match_all('/http:\/\/[^\/]*/', $this->curr_href, $domain);
