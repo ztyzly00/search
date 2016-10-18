@@ -21,6 +21,8 @@ use Goutte\Client;
  *          ->是搜狐的站点让redis负载变高，将搜狐的策略缩小即可（为何搜狐这么屌？）
  *      当增大策略的规模时，redis的内存不够用，造成swap，性能急剧下降
  *          ->还是需要缩小策略的范围。
+ *          ->去重策略修改（原来多一个set去重方案没有必要，将维持待抓取的list改为set，可缩小一半内存）
+ *              ->去重策略可以动态判定添加，但是算法难度较大。
  * 
  *          ->减小mysql所需内存，将大部分内存留给redis.(mysql的磁盘交互在大量抓取的情况下无法避免，高性能的去重优先交给redis)
  *              ->还是磁盘压力过大，只能取消记录抓取记录了。只记录内容，可以少很多次mysql交互
@@ -110,19 +112,43 @@ class HrefSearcher {
      * @param type $from_href
      * @return string
      */
-    public function getInsertQuery($nodes) {
+    public function getInsertQuery($nodes, $from_href) {
+
+        $query = '';
+        $href_count = 0;
 
         foreach ($nodes as $node) {
+
             $href = $node->getAttribute('href');
+
             /* 判断合法性并进行href的过滤整合 */
             if (!$this->isHrefLegal($href)) {
                 continue;
             }
+
             $href = addslashes($href);
-            if (!$this->redis_obj->sAdd('unique_href_set', $href)) {
-                $this->redis_obj->sAdd('spider_href_set_' . $this->strategy_id, $href);
+
+            if ($this->redis_obj->sAdd('spider_href_set_' . $this->strategy_id, $href)) {
+                $href_count++;
+                if (!$query) {
+                    $query = "insert into search_href "
+                            . "(`href`,`from_href`,`strategy_id`,`num`,`status`) "
+                            . "values "
+                            . "('$href','$from_href','$this->strategy_id',1,0)";
+                } else {
+                    $query.=",('$href','$from_href','$this->strategy_id',1,0)";
+                }
+            } else {
+                /* 可以做热度的叠加，后期再考虑 */
             }
         }
+
+        if ($href_count) {
+            $exec_query = "update search_count set hrefcount=hrefcount+$href_count";
+            $this->mysql_obj->exec_query($exec_query);
+        }
+
+        return $query;
     }
 
     /**
@@ -270,7 +296,7 @@ class HrefSearcher {
      * @param type $crawler
      * @param type $curr_href
      */
-    public function recordInfo($crawler) {
+    public function recordInfo($crawler, $curr_href) {
 
         /* 分类添加新闻网页的新闻内容,title等内容 */
         $title = call_user_func(array($this->getStrategy(), 'getTitle'), $crawler);
@@ -287,9 +313,12 @@ class HrefSearcher {
 
         if ($title && $p_content) {
             /* 记录到内容表中 */
-            $query = "insert into search_content (`title`,`href`,`pcontent`,`strategy_id`) values "
-                    . "('$title','$this->curr_href','$p_content',$this->strategy_id)";
+            $query = "insert into search_content (`title`,`pcontent`) values ('$title','$p_content')";
             $this->mysql_obj->exec_query($query);
+
+            $content_id = \mysqli_insert_id($this->mysql_obj->get_link());
+            $update_query = "update search_href set status=1,contentid=$content_id where href='$curr_href'";
+            $this->mysql_obj->exec_query($update_query);
 
             $exec_query = "update search_count set contentcount=contentcount+1";
             $this->mysql_obj->exec_query($exec_query);
@@ -300,11 +329,14 @@ class HrefSearcher {
 
         $crawler = $this->client->request('GET', $curr_href);
 
-        $this->recordInfo($crawler);
+        $this->recordInfo($crawler, $curr_href);
 
         /* 添加网页中的所有连接,用于下一步的抓取 */
         $nodes = $crawler->filter('a')->getNodes();
-        $this->getInsertQuery($nodes);
+        $query = $this->getInsertQuery($nodes, $curr_href);
+        if ($query) {
+            $this->mysql_obj->exec_query($query);
+        }
     }
 
     public function Grab() {
