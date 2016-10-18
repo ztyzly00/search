@@ -1,0 +1,21 @@
+{
+    "name": "regex-guard/regex-guard",
+    "description": "A wrapper that allows you to validate regular expressions and handle normally uncatchable PCRE compilation warnings",
+    "keywords": ["regex", "regexp",  "PCRE", "preg", "support", "utils"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Márcio Almada",
+            "email": "marcio3w@gmail.com",
+            "homepage": "https://github.com/marcioAlmada/"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "RegexGuard\\": "src/"
+        }
+    },
+    "require-dev": {
+        "mockery/mockery": "dev-master"
+    }
+}

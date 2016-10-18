@@ -112,6 +112,7 @@ class HrefSearcher {
      */
     public function getInsertQuery($nodes) {
 
+        $query = "";
         foreach ($nodes as $node) {
             $href = $node->getAttribute('href');
             /* 判断合法性并进行href的过滤整合 */
@@ -121,8 +122,19 @@ class HrefSearcher {
             $href = addslashes($href);
             if (!$this->redis_obj->sAdd('unique_href_set', $href)) {
                 $this->redis_obj->sAdd('spider_href_set_' . $this->strategy_id, $href);
+                /* 调试性能段 */
+//                if (!$query) {
+//                    $query = "insert into search_href "
+//                            . "(`href`,`from_href`,`strategy_id`,`num`,`status`) "
+//                            . "values "
+//                            . "('$href','$this->curr_href','$this->strategy_id',1,0)";
+//                } else {
+//                    $query.=",('$href','$this->curr_href','$this->strategy_id',1,0)";
+//                }
             }
         }
+
+//        $this->mysql_obj->exec_query($query);
     }
 
     /**
@@ -140,7 +152,7 @@ class HrefSearcher {
 
         if (strpos($href, "http") === FALSE) {
 
-            /* 判断是否可能是简洁路径,若是php和asp等动态不在考虑内，防止对方服务器爆炸 */
+            /* 判断是否可能是简洁路径,若是php和asp等动态不在考虑内，防止对方服务器爆炸  */
             if (strpos($href, "htm") !== FALSE) {
                 $curr_href = $this->curr_href;
                 $domain = array();
@@ -274,7 +286,6 @@ class HrefSearcher {
 
         /* 分类添加新闻网页的新闻内容,title等内容 */
         $title = call_user_func(array($this->getStrategy(), 'getTitle'), $crawler);
-
         if ($title) {
             $p_content = call_user_func(array($this->getStrategy(), 'getPContent'), $crawler);
 
@@ -293,6 +304,10 @@ class HrefSearcher {
 
             $exec_query = "update search_count set contentcount=contentcount+1";
             $this->mysql_obj->exec_query($exec_query);
+        } else {
+            /* 调试性能段 */
+//            $query = "insert into search_rubbish (`href`,`strategy_id`) values ('$this->curr_href',$this->strategy_id)";
+//            $this->mysql_obj->exec_query($query);
         }
     }
 

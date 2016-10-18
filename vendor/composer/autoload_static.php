@@ -11,19 +11,44 @@ class ComposerStaticInit4be1fb59d4ffa65ff2f6b04a0224db4a
         'c964ee0ededf28c96ebd9db5099ef910' => __DIR__ . '/..' . '/guzzlehttp/promises/src/functions_include.php',
         'a0edc8309cc5e1d60e3047b5df6b7052' => __DIR__ . '/..' . '/guzzlehttp/psr7/src/functions_include.php',
         '37a3dc5111fe8f707ab4c132ef1dbc62' => __DIR__ . '/..' . '/guzzlehttp/guzzle/src/functions_include.php',
+        '5e4ee30b0a377b0b65d27c011b469d11' => __DIR__ . '/..' . '/ovr/phpsa/src/functions.php',
     );
 
     public static $prefixLengthsPsr4 = array (
+        'p' => 
+        array (
+            'phpDocumentor\\Reflection\\' => 25,
+        ),
+        'W' => 
+        array (
+            'Webiny\\Component\\StdLib\\' => 24,
+            'Webiny\\Component\\EventManager\\' => 30,
+        ),
         'S' => 
         array (
             'Symfony\\Polyfill\\Mbstring\\' => 26,
+            'Symfony\\Component\\Yaml\\' => 23,
+            'Symfony\\Component\\Filesystem\\' => 29,
+            'Symfony\\Component\\EventDispatcher\\' => 34,
             'Symfony\\Component\\DomCrawler\\' => 29,
             'Symfony\\Component\\CssSelector\\' => 30,
+            'Symfony\\Component\\Console\\' => 26,
+            'Symfony\\Component\\Config\\' => 25,
             'Symfony\\Component\\BrowserKit\\' => 29,
+        ),
+        'R' => 
+        array (
+            'RegexGuard\\' => 11,
         ),
         'P' => 
         array (
             'Psr\\Http\\Message\\' => 17,
+            'PhpParser\\' => 10,
+            'PHPSA\\' => 6,
+        ),
+        'O' => 
+        array (
+            'Ovr\\PHPReflection\\' => 18,
         ),
         'G' => 
         array (
@@ -35,9 +60,34 @@ class ComposerStaticInit4be1fb59d4ffa65ff2f6b04a0224db4a
     );
 
     public static $prefixDirsPsr4 = array (
+        'phpDocumentor\\Reflection\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/phpdocumentor/reflection-common/src',
+            1 => __DIR__ . '/..' . '/phpdocumentor/type-resolver/src',
+        ),
+        'Webiny\\Component\\StdLib\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/webiny/std-lib',
+        ),
+        'Webiny\\Component\\EventManager\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/webiny/event-manager',
+        ),
         'Symfony\\Polyfill\\Mbstring\\' => 
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-mbstring',
+        ),
+        'Symfony\\Component\\Yaml\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/yaml',
+        ),
+        'Symfony\\Component\\Filesystem\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/filesystem',
+        ),
+        'Symfony\\Component\\EventDispatcher\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/event-dispatcher',
         ),
         'Symfony\\Component\\DomCrawler\\' => 
         array (
@@ -47,13 +97,37 @@ class ComposerStaticInit4be1fb59d4ffa65ff2f6b04a0224db4a
         array (
             0 => __DIR__ . '/..' . '/symfony/css-selector',
         ),
+        'Symfony\\Component\\Console\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/console',
+        ),
+        'Symfony\\Component\\Config\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/config',
+        ),
         'Symfony\\Component\\BrowserKit\\' => 
         array (
             0 => __DIR__ . '/..' . '/symfony/browser-kit',
         ),
+        'RegexGuard\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/regex-guard/regex-guard/src',
+        ),
         'Psr\\Http\\Message\\' => 
         array (
             0 => __DIR__ . '/..' . '/psr/http-message/src',
+        ),
+        'PhpParser\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/nikic/php-parser/lib/PhpParser',
+        ),
+        'PHPSA\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/ovr/phpsa/src',
+        ),
+        'Ovr\\PHPReflection\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/ovr/phpreflection/src',
         ),
         'GuzzleHttp\\Psr7\\' => 
         array (
@@ -73,11 +147,22 @@ class ComposerStaticInit4be1fb59d4ffa65ff2f6b04a0224db4a
         ),
     );
 
+    public static $prefixesPsr0 = array (
+        'p' => 
+        array (
+            'phpDocumentor' => 
+            array (
+                0 => __DIR__ . '/..' . '/phpdocumentor/reflection-docblock/src',
+            ),
+        ),
+    );
+
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
             $loader->prefixLengthsPsr4 = ComposerStaticInit4be1fb59d4ffa65ff2f6b04a0224db4a::$prefixLengthsPsr4;
             $loader->prefixDirsPsr4 = ComposerStaticInit4be1fb59d4ffa65ff2f6b04a0224db4a::$prefixDirsPsr4;
+            $loader->prefixesPsr0 = ComposerStaticInit4be1fb59d4ffa65ff2f6b04a0224db4a::$prefixesPsr0;
 
         }, null, ClassLoader::class);
     }

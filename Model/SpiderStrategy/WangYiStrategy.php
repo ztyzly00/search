@@ -19,7 +19,23 @@ class WangYiStrategy extends Strategy {
         $title = '';
         if ($crawler->filter('#epContentLeft > h1')->getNode(0)) {
             $title = $crawler->filter('#epContentLeft > h1')->html();
+            if ($title) {
+                return $title;
+            }
         }
+        if ($crawler->filter('#h1title')->getNode(0)) {
+            $title = $crawler->filter('#h1title')->html();
+            if ($title) {
+                return $title;
+            }
+        }
+        if ($crawler->filter('#endTitle')->getNode(0)) {
+            $title = $crawler->filter('#endTitle')->html();
+            if ($title) {
+                return $title;
+            }
+        }
+
         return $title;
     }
 
