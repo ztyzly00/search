@@ -7,41 +7,7 @@ namespace Model\SpiderStrategy;
  */
 class XinHuaStrategy extends Strategy {
 
-    public static function getPContent($crawler) {
-        $p_content = '';
-        if ($crawler->filter('#content')->getNode(0)) {
-            $p_content = $crawler->filter('#content')->html();
-            if ($p_content) {
-                return $p_content;
-            }
-        }
-        if ($crawler->filter('.article')->count()) {
-            return $crawler->filter('.article')->html();
-        }
-
-        if ($crawler->filter('#Content')->count()) {
-            return $crawler->filter('#Content')->html();
-        }
-
-        return $p_content;
-    }
-
-    public static function getTitle($crawler) {
-        $title = '';
-        if ($crawler->filter('#title')->getNode(0)) {
-            $title = $crawler->filter('#title')->html();
-            if ($title) {
-                return $title;
-            }
-        }
-
-        if ($crawler->filter('#Title')->getNode(0)) {
-            $title = $crawler->filter('#Title')->html();
-            if ($title) {
-                return $title;
-            }
-        }
-        return $title;
-    }
+    public static $title_strategy_array = array('#title', '#Title');
+    public static $pcontent_strategy_array = array('#content', '.article', '#Content');
 
 }

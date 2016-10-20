@@ -7,40 +7,7 @@ namespace Model\SpiderStrategy;
  */
 class SouHuStrategy extends Strategy {
 
-    public static function getPContent($crawler) {
-        $p_content = '';
-        if ($crawler->filter('#contentText')->getNode(0)) {
-            $p_content = $crawler->filter('#contentText')->html();
-            if ($p_content) {
-                return $p_content;
-            }
-        }
-
-        if ($crawler->filter('#sohu_content')->getNode(0)) {
-            $p_content = $crawler->filter('#sohu_content')->html();
-            if ($p_content) {
-                return $p_content;
-            }
-        }
-        return $p_content;
-    }
-
-    public static function getTitle($crawler) {
-        $title = '';
-        if ($crawler->filter('.content-box > h1')->getNode(0)) {
-            $title = $crawler->filter('.content-box > h1')->html();
-            if ($title) {
-                return $title;
-            }
-        }
-
-        if ($crawler->filter('.article_area > h1')->getNode(0)) {
-            $title = $crawler->filter('.article_area > h1')->html();
-            if ($title) {
-                return $title;
-            }
-        }
-        return $title;
-    }
+    public static $title_strategy_array = array('.content-box > h1', '.article_area > h1');
+    public static $pcontent_strategy_array = array('#contentText', '#sohu_content');
 
 }

@@ -7,42 +7,7 @@ namespace Model\SpiderStrategy;
  */
 class XinLangStrategy extends Strategy {
 
-    public static function getPContent($crawler) {
-        $p_content = '';
-        if ($crawler->filter('#artibody')->getNode(0)) {
-            $p_content = $crawler->filter('#artibody')->html();
-            if ($p_content) {
-                return $p_content;
-            }
-        }
-
-        return $p_content;
-    }
-
-    public static function getTitle($crawler) {
-        $title = '';
-        if ($crawler->filter('#artibodyTitle')->count()) {
-            $title = $crawler->filter('#artibodyTitle')->html();
-            if ($title) {
-                return $title;
-            }
-        }
-
-        if ($crawler->filter('#main_title')->count()) {
-            $title = $crawler->filter('#main_title')->html();
-            if ($title) {
-                return $title;
-            }
-        }
-
-        if ($crawler->filter('.article-header h1')->count()) {
-            $title = $crawler->filter('.article-header h1')->html();
-            if ($title) {
-                return $title;
-            }
-        }
-
-        return $title;
-    }
+    public static $title_strategy_array = array('#artibodyTitle', '#main_title', '.article-header h1');
+    public static $pcontent_strategy_array = array('#artibody');
 
 }
