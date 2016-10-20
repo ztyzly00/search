@@ -10,7 +10,7 @@ Target Server Type    : MYSQL
 Target Server Version : 50505
 File Encoding         : 65001
 
-Date: 2016-10-18 14:32:58
+Date: 2016-10-20 14:44:36
 */
 
 SET FOREIGN_KEY_CHECKS=0;
@@ -26,7 +26,7 @@ CREATE TABLE `search_content` (
   `pcontent` mediumtext,
   `strategy_id` int(2) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1082842 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=33053833 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Records of search_content
@@ -77,7 +77,7 @@ CREATE TABLE `search_filter_abandon` (
   `strategy_id` int(10) DEFAULT NULL,
   `string` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Records of search_filter_abandon
@@ -90,6 +90,11 @@ INSERT INTO `search_filter_abandon` VALUES ('5', '3', 'photoview');
 INSERT INTO `search_filter_abandon` VALUES ('6', '6', 'video');
 INSERT INTO `search_filter_abandon` VALUES ('7', '1', 'shuhua');
 INSERT INTO `search_filter_abandon` VALUES ('8', '3', 'special');
+INSERT INTO `search_filter_abandon` VALUES ('9', '6', 'game');
+INSERT INTO `search_filter_abandon` VALUES ('10', '3', 'photo');
+INSERT INTO `search_filter_abandon` VALUES ('11', '6', 'auto');
+INSERT INTO `search_filter_abandon` VALUES ('12', '1', 'fortune');
+INSERT INTO `search_filter_abandon` VALUES ('13', '1', 'audio');
 
 -- ----------------------------
 -- Table structure for search_href

@@ -119,7 +119,6 @@ class HrefSearcher {
     public function insertHref($crawler) {
         $crawler_a = $crawler->filter('a');
         $nodes = $crawler_a->getNodes();
-        $query = "";
 
         for ($i = 0; $i < count($nodes); $i++) {
             $node = $nodes[$i];
@@ -127,35 +126,18 @@ class HrefSearcher {
 
             /* 判断合法性并进行href的过滤整合 */
             if (!$this->isHrefLegal($href)) {
+                $query = "insert into search_rubbish (`href`,`strategy_id`) values ('$href',$this->strategy_id)";
+                $this->mysql_obj->exec_query($query);
                 continue;
+            } else {
+                
             }
-
-            /* 新闻标题特性过滤(没有必要) */
-//            $text = trim($crawler_a->getChild($i)->text());
-//
-//            $text_length = mb_strlen($text);
-//            if ($text_length < 6 || $text_length > 100) {
-//                print_r($text . $href . "\n");
-//                continue;
-//            }
 
             $href = addslashes($href);
             if ($this->redis_obj->sAdd('unique_href_set', $href)) {
                 $this->xm_redis_obj->sAdd('spider_href_set_' . $this->strategy_id, $href);
-                /* 调试性能段 */
-//                if (!$query) {
-//                    $query = "insert into search_href "
-//                            . "(`href`,`from_href`,`strategy_id`,`num`,`status`) "
-//                            . "values "
-//                            . "('$href','$this->curr_href','$this->strategy_id',1,0)";
-//                } else {
-//                    $query.=",('$href','$this->curr_href','$this->strategy_id',1,0)";
-//                }
             }
         }
-
-
-//        $this->mysql_obj->exec_query($query);
     }
 
     /**
@@ -327,8 +309,8 @@ class HrefSearcher {
             $this->mysql_obj->exec_query($exec_query);
         } else {
             /* 调试性能段 */
-            $query = "insert into search_rubbish (`href`,`strategy_id`) values ('$this->curr_href',$this->strategy_id)";
-            $this->mysql_obj->exec_query($query);
+//            $query = "insert into search_rubbish (`href`,`strategy_id`) values ('$this->curr_href',$this->strategy_id)";
+//            $this->mysql_obj->exec_query($query);
         }
     }
 
