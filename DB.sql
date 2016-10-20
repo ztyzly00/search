@@ -10,7 +10,7 @@ Target Server Type    : MYSQL
 Target Server Version : 50505
 File Encoding         : 65001
 
-Date: 2016-10-18 08:45:11
+Date: 2016-10-18 14:32:58
 */
 
 SET FOREIGN_KEY_CHECKS=0;
@@ -26,7 +26,7 @@ CREATE TABLE `search_content` (
   `pcontent` mediumtext,
   `strategy_id` int(2) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4534020 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=1082842 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Records of search_content
@@ -77,13 +77,19 @@ CREATE TABLE `search_filter_abandon` (
   `strategy_id` int(10) DEFAULT NULL,
   `string` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Records of search_filter_abandon
 -- ----------------------------
 INSERT INTO `search_filter_abandon` VALUES ('1', '1', 'photo');
 INSERT INTO `search_filter_abandon` VALUES ('2', '1', 'forum');
+INSERT INTO `search_filter_abandon` VALUES ('3', '3', 'photonew');
+INSERT INTO `search_filter_abandon` VALUES ('4', '1', 'video');
+INSERT INTO `search_filter_abandon` VALUES ('5', '3', 'photoview');
+INSERT INTO `search_filter_abandon` VALUES ('6', '6', 'video');
+INSERT INTO `search_filter_abandon` VALUES ('7', '1', 'shuhua');
+INSERT INTO `search_filter_abandon` VALUES ('8', '3', 'special');
 
 -- ----------------------------
 -- Table structure for search_href
@@ -100,7 +106,7 @@ CREATE TABLE `search_href` (
   PRIMARY KEY (`id`),
   KEY `href` (`href`) USING BTREE,
   KEY `contentid` (`contentid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=2131733 DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------
 -- Records of search_href
@@ -128,6 +134,19 @@ INSERT INTO `search_orgin` VALUES ('6', '4', 'http://www.sohu.com/');
 INSERT INTO `search_orgin` VALUES ('7', '5', 'http://www.ifeng.com/');
 INSERT INTO `search_orgin` VALUES ('8', '6', 'http://news.sina.com.cn/');
 INSERT INTO `search_orgin` VALUES ('9', '0', 'http://www.sohu.com/');
+
+-- ----------------------------
+-- Table structure for search_rubbish
+-- ----------------------------
+DROP TABLE IF EXISTS `search_rubbish`;
+CREATE TABLE `search_rubbish` (
+  `href` varchar(255) DEFAULT NULL,
+  `strategy_id` int(10) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- ----------------------------
+-- Records of search_rubbish
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for search_strategy

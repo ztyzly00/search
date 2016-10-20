@@ -21,9 +21,13 @@ use Goutte\Client;
  *          ->是搜狐的站点让redis负载变高，将搜狐的策略缩小即可（为何搜狐这么屌？）
  *      当增大策略的规模时，redis的内存不够用，造成swap，性能急剧下降
  *          ->还是需要缩小策略的范围。
+ *          ->使用另外一台服务器redis存储，redis空间缓解        
  * 
  *          ->减小mysql所需内存，将大部分内存留给redis.(mysql的磁盘交互在大量抓取的情况下无法避免，高性能的去重优先交给redis)
  *              ->还是磁盘压力过大，只能取消记录抓取记录了。只记录内容，可以少很多次mysql交互
+ *          
+ *          ->提高抓取策略算法，下一步打算从a标签的特性入手（从新闻网站的连接特性）
+ *              ->超链接的字数
  * 
  * 建议：
  *      针对初期磁盘压力过大，很大一部分原因是热度优先所搜导致硬盘读取，
@@ -37,7 +41,7 @@ use Goutte\Client;
  *               ->【削减mysql所需数据量，让mysql的表数据小于innodb_buffer_pool_size的大小,大量字符串用mongodb存储】
  *               ->【mongodb建立索引后同样很慢，磁盘瓶颈主要体现在整个document内容的插入，应该舍弃部分内容,提取精华内容插入】
  *               ->【解决办法，扩大innodb_buffer_pool_size（暂时性），无索引的关系表分离，防止内存与硬盘做太多io交互】（已解决）
- * 
+ *            
  * 
  *      若可以采用python抓取更好，应该使用epoll维持响应，Goutte库会造成响应阻塞（需要用多进程弥补）
  *      数据库建议采用Mongodb或者hbase，用mysql维持关系性，采用redis维持href去重列表（不依靠mysql的唯一键） (已解决,Mongodb暂时不需要)
@@ -86,6 +90,7 @@ class HrefSearcher {
      * @var type 
      */
     private $redis_obj;
+    private $xm_redis_obj;
 
     /**
      * Goutte实例
@@ -101,6 +106,7 @@ class HrefSearcher {
         $this->strategy_id = $strategy_id;
         $this->mysql_obj = XmMysqlObj::getInstance();
         $this->redis_obj = RedisFactory::createRedisInstance();
+        $this->xm_redis_obj = RedisFactory::createXmRedisInstance();
         $this->client = new Client();
     }
 
@@ -110,18 +116,32 @@ class HrefSearcher {
      * @param type $from_href
      * @return string
      */
-    public function getInsertQuery($nodes) {
-
+    public function insertHref($crawler) {
+        $crawler_a = $crawler->filter('a');
+        $nodes = $crawler_a->getNodes();
         $query = "";
-        foreach ($nodes as $node) {
+
+        for ($i = 0; $i < count($nodes); $i++) {
+            $node = $nodes[$i];
             $href = $node->getAttribute('href');
+
             /* 判断合法性并进行href的过滤整合 */
             if (!$this->isHrefLegal($href)) {
                 continue;
             }
+
+            /* 新闻标题特性过滤(没有必要) */
+//            $text = trim($crawler_a->getChild($i)->text());
+//
+//            $text_length = mb_strlen($text);
+//            if ($text_length < 6 || $text_length > 100) {
+//                print_r($text . $href . "\n");
+//                continue;
+//            }
+
             $href = addslashes($href);
-            if (!$this->redis_obj->sAdd('unique_href_set', $href)) {
-                $this->redis_obj->sAdd('spider_href_set_' . $this->strategy_id, $href);
+            if ($this->redis_obj->sAdd('unique_href_set', $href)) {
+                $this->xm_redis_obj->sAdd('spider_href_set_' . $this->strategy_id, $href);
                 /* 调试性能段 */
 //                if (!$query) {
 //                    $query = "insert into search_href "
@@ -133,6 +153,7 @@ class HrefSearcher {
 //                }
             }
         }
+
 
 //        $this->mysql_obj->exec_query($query);
     }
@@ -261,7 +282,7 @@ class HrefSearcher {
     public function getCurrHref() {
 
         /* 获取当前需要抓取的href 利用redis队列弹出 */
-        $curr_href = $this->redis_obj->sPop('spider_href_set_' . $this->strategy_id);
+        $curr_href = $this->xm_redis_obj->sPop('spider_href_set_' . $this->strategy_id);
 
         if (!$curr_href) {
             /* 取策略的最初href */
@@ -306,8 +327,8 @@ class HrefSearcher {
             $this->mysql_obj->exec_query($exec_query);
         } else {
             /* 调试性能段 */
-//            $query = "insert into search_rubbish (`href`,`strategy_id`) values ('$this->curr_href',$this->strategy_id)";
-//            $this->mysql_obj->exec_query($query);
+            $query = "insert into search_rubbish (`href`,`strategy_id`) values ('$this->curr_href',$this->strategy_id)";
+            $this->mysql_obj->exec_query($query);
         }
     }
 
@@ -318,8 +339,7 @@ class HrefSearcher {
         $this->recordInfo($crawler);
 
         /* 添加网页中的所有连接,用于下一步的抓取 */
-        $nodes = $crawler->filter('a')->getNodes();
-        $this->getInsertQuery($nodes);
+        $this->insertHref($crawler);
     }
 
     public function Grab() {
@@ -329,7 +349,7 @@ class HrefSearcher {
 
         /* 操作失败回退 */
         register_shutdown_function(function() {
-            $this->redis_obj->sAdd('spider_href_set_' . $this->strategy_id, $this->curr_href);
+            $this->xm_redis_obj->sAdd('spider_href_set_' . $this->strategy_id, $this->curr_href);
         });
 
         /* 大量数据库操作 大概1秒左右响应（包括爬虫的href抓取） */

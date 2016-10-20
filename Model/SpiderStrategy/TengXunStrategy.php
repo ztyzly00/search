@@ -19,6 +19,15 @@ class TengXunStrategy extends Strategy {
         $title = '';
         if ($crawler->filter('.hd > h1')->getNode(0)) {
             $title = $crawler->filter('.hd > h1')->html();
+            if ($title) {
+                return $title;
+            }
+        }
+        if ($crawler->filter('#ArticleTit')->getNode(0)) {
+            $title = $crawler->filter('#ArticleTit')->html();
+            if ($title) {
+                return $title;
+            }
         }
         return $title;
     }
