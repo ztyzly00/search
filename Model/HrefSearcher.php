@@ -97,7 +97,7 @@ class HrefSearcher {
                 continue;
             }
             $href = addslashes($href);
-            
+
             if ($this->redis_obj->sAdd('unique_href_set', $href)) {
                 $this->xm_redis_obj->sAdd('spider_href_set_' . $this->strategy_id, $href);
             }
@@ -237,7 +237,7 @@ class HrefSearcher {
         }
 
         $curr_href = addslashes($curr_href);
-        
+
         $this->curr_href = $curr_href;
 
         return $curr_href;
@@ -271,7 +271,8 @@ class HrefSearcher {
             $exec_query = "update search_count set contentcount=contentcount+1";
             $this->mysql_obj->exec_query($exec_query);
         } else {
-
+            //$query = "insert into search_rubbish (`href`,`strategy_id`) values ('$this->curr_href',$this->strategy_id)";
+            //$this->mysql_obj->exec_query($query);
         }
     }
 
