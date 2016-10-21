@@ -7,7 +7,6 @@ use Core\Redis\RedisFactory;
 use Model\Utils\WebUtils;
 use Goutte\Client;
 
-
 class HrefSearcher {
 
     /**

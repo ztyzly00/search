@@ -222,7 +222,7 @@ class HrefSearcher {
     }
 
     /**
-     * 当前抓取href获取策略 ， 采用热度优先搜索(根据连接的重复性判断优先级)
+     * 当前抓取href获取策略
      * @return type
      */
     public function getCurrHref() {
@@ -306,7 +306,13 @@ class HrefSearcher {
     public function startGrab() {
 
         while (true) {
-            $this->Grab();
+            $pid_num = $this->redis_obj->
+                    get('spider_strategy_pid_num_' . $this->strategy_id);
+            if ($pid_num) {
+                $this->Grab();
+            } else {
+                exit;
+            }
         }
     }
 
