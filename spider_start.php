@@ -128,7 +128,7 @@ function strategy_start($strategy_id) {
                 } else if (count($pids) > $pid_num) {
                     $status = 0;
                     $pid = pcntl_waitpid(-1, $status);
-                    unset($pid[$pid]);
+                    unset($pids[$pid]);
                 }
                 break;
         }
