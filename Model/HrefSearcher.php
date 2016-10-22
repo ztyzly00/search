@@ -78,11 +78,72 @@ class HrefSearcher {
         $this->client = new Client();
     }
 
+    public function startGrab() {
+
+        while (true) {
+            $pid_num = $this->redis_obj->
+                    get('spider_strategy_pid_num_' . $this->strategy_id);
+            if ($pid_num) {
+                $this->Grab();
+            } else {
+                exit;
+            }
+        }
+    }
+
+    public function Grab() {
+
+        $curr_href = $this->getCurrHref();
+
+        register_shutdown_function(function() {
+            $this->xm_redis_obj->
+                    sAdd('spider_href_set_' . $this->strategy_id, $this->curr_href);
+        });
+
+        $this->grabHref($curr_href);
+    }
+
+    public function grabHref($curr_href) {
+
+        $crawler = $this->client->request('GET', $curr_href);
+
+        $this->recordInfo($crawler);
+
+        $this->insertHref($crawler);
+    }
+
+    public function recordInfo($crawler) {
+
+        /* 分类添加新闻网页的新闻内容,title等内容 */
+        $title = call_user_func(array($this->getStrategy(), 'getTitle'), $crawler);
+        if ($title) {
+            $p_content = call_user_func(array($this->getStrategy(), 'getPContent'), $crawler);
+
+            /* 字符处理 */
+            $p_content = WebUtils::toUtf8($p_content);
+            $p_content = addslashes($p_content);
+            $title = WebUtils::toUtf8($title);
+            $title = addslashes($title);
+            $title = trim($title);
+        }
+
+        if ($title && $p_content) {
+            /* 记录到内容表中 */
+            $query = "insert into search_content (`title`,`href`,`pcontent`,`strategy_id`) values "
+                    . "('$title','$this->curr_href','$p_content',$this->strategy_id)";
+            $this->mysql_obj->exec_query($query);
+
+            $exec_query = "update search_count set contentcount=contentcount+1";
+            $this->mysql_obj->exec_query($exec_query);
+        } else {
+            $query = "insert into search_rubbish (`href`,`strategy_id`) values ('$this->curr_href',$this->strategy_id)";
+            $this->mysql_obj->exec_query($query);
+        }
+    }
+
     /**
-     * 获取批量插入的query语句,用于href的插入
-     * @param type $nodes
-     * @param type $from_href
-     * @return string
+     * 批量插入待抓取的href
+     * @param type $crawler
      */
     public function insertHref($crawler) {
         $crawler_a = $crawler->filter('a');
@@ -227,11 +288,9 @@ class HrefSearcher {
      */
     public function getCurrHref() {
 
-        /* 获取当前需要抓取的href 利用redis队列弹出 */
         $curr_href = $this->xm_redis_obj->sPop('spider_href_set_' . $this->strategy_id);
 
         if (!$curr_href) {
-            /* 取策略的最初href */
             $href = $this->mysql_obj->fetch_assoc_one("select href from search_orgin where strategy_id=$this->strategy_id limit 1");
             $curr_href = $href['href'];
         }
@@ -241,83 +300,6 @@ class HrefSearcher {
         $this->curr_href = $curr_href;
 
         return $curr_href;
-    }
-
-    /**
-     * 处理并记录相应的一些内容
-     * @param type $crawler
-     * @param type $curr_href
-     */
-    public function recordInfo($crawler) {
-
-        /* 分类添加新闻网页的新闻内容,title等内容 */
-        $title = call_user_func(array($this->getStrategy(), 'getTitle'), $crawler);
-        if ($title) {
-            $p_content = call_user_func(array($this->getStrategy(), 'getPContent'), $crawler);
-
-            /* 字符处理 */
-            $p_content = WebUtils::toUtf8($p_content);
-            $p_content = addslashes($p_content);
-            $title = WebUtils::toUtf8($title);
-            $title = addslashes($title);
-            $title = trim($title);
-        }
-
-        if ($title && $p_content) {
-            /* 记录到内容表中 */
-            $query = "insert into search_content (`title`,`href`,`pcontent`,`strategy_id`) values "
-                    . "('$title','$this->curr_href','$p_content',$this->strategy_id)";
-            $this->mysql_obj->exec_query($query);
-
-            $exec_query = "update search_count set contentcount=contentcount+1";
-            $this->mysql_obj->exec_query($exec_query);
-        } else {
-            $query = "insert into search_rubbish (`href`,`strategy_id`) values ('$this->curr_href',$this->strategy_id)";
-            $this->mysql_obj->exec_query($query);
-        }
-    }
-
-    public function grabHref($curr_href) {
-
-        $crawler = $this->client->request('GET', $curr_href);
-
-        $this->recordInfo($crawler);
-
-        /*
-         * 添加网页中的所有连接,用于下一步的抓取
-         * 当内存满了的时候也可以暂时放弃插入。全站的抓取还是要建立在无限内存的基础上
-         */
-        $this->insertHref($crawler);
-    }
-
-    public function Grab() {
-
-        /* 大量操作数据库前,获取当前抓取的连接 */
-        $curr_href = $this->getCurrHref();
-
-        /* 操作失败回退 */
-        register_shutdown_function(function() {
-            $this->xm_redis_obj->sAdd('spider_href_set_' . $this->strategy_id, $this->curr_href);
-        });
-
-        /* 大量数据库操作 大概1秒左右响应（包括爬虫的href抓取） */
-        $this->grabHref($curr_href);
-    }
-
-    /**
-     * 抓取循环
-     */
-    public function startGrab() {
-
-        while (true) {
-            $pid_num = $this->redis_obj->
-                    get('spider_strategy_pid_num_' . $this->strategy_id);
-            if ($pid_num) {
-                $this->Grab();
-            } else {
-                exit;
-            }
-        }
     }
 
     /**

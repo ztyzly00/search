@@ -13,10 +13,6 @@ $total_pid_num = 400;
 $strategy_array = getStrategyArray();
 $origin_pid_num = intval($total_pid_num / count($strategy_array));
 
-/*
- *  redis句柄不能用Core中的redis工厂单例模式生成
- *  多进程中会造成单例redis缓存溢出错误 
- */
 $redis_obj = RedisFactory::createRedisInstance(1);
 
 for ($i = 0; $i < count($strategy_array); $i++) {
@@ -48,7 +44,7 @@ while (true) {
 
         $strategy_id = $strategy_array[$i];
         $curr_href_num = $xm_redis_obj
-                ->sCard('spider_href_set_' . $strategy_array[$i]);
+                ->sCard('spider_href_set_' . $strategy_id);
 
         if (isset($spider_href_num[$strategy_id])) {
             $prev_href_num = $spider_href_num[$strategy_id];
@@ -80,8 +76,7 @@ while (true) {
             }
         }
 
-        /* 数组键为策略id 键值为改策略的待抓取href数量 */
-        $spider_href_num[$strategy_array[$i]] = $curr_href_num;
+        $spider_href_num[$strategy_id] = $curr_href_num;
     }
 }
 
@@ -95,7 +90,6 @@ foreach ($pids_array as $i => $pid) {
 /**
  * 根据策略值开始并行抓取新闻
  * @param type $strategy_id
- * @param type $pid_num
  */
 function strategy_start($strategy_id) {
 
@@ -117,7 +111,6 @@ function strategy_start($strategy_id) {
             default:
                 $pid_num = $redis_obj->get('spider_strategy_pid_num_' . $strategy_id);
                 if ($pid_num == 0) {
-                    /* 进程全部回收并退出父进程 */
                     foreach ($pids as $pid) {
                         if ($pid) {
                             $status = 0;
