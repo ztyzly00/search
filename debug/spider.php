@@ -1,7 +1,7 @@
 <?php
 
-require_once 'autoload.php';
-require_once 'vendor/autoload.php';
+require_once __DIR__ . '/../autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 use Model\HrefSearcher;
 
@@ -13,4 +13,3 @@ if (!(isset($argv[1]))) {
 
 $href_searcher = new HrefSearcher($strategy_id);
 $href_searcher->startGrab();
-

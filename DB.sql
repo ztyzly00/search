@@ -1,7 +1,7 @@
 /*
 Navicat MySQL Data Transfer
 
-Source Server         : 192.168.20.2_mariadb@root
+Source Server         : 192.168.20.2_mariadb@webuser
 Source Server Version : 50505
 Source Host           : 192.168.20.2:3306
 Source Database       : scraper
@@ -10,7 +10,7 @@ Target Server Type    : MYSQL
 Target Server Version : 50505
 File Encoding         : 65001
 
-Date: 2016-10-20 14:44:36
+Date: 2016-10-22 11:01:53
 */
 
 SET FOREIGN_KEY_CHECKS=0;
@@ -26,7 +26,7 @@ CREATE TABLE `search_content` (
   `pcontent` mediumtext,
   `strategy_id` int(2) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=33053833 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=51198079 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Records of search_content
@@ -64,8 +64,8 @@ INSERT INTO `search_filter` VALUES ('3', '2', 'http://news.qq.com');
 INSERT INTO `search_filter` VALUES ('5', '1', 'http://news.xinhuanet.com');
 INSERT INTO `search_filter` VALUES ('7', '3', 'http://news.163.com');
 INSERT INTO `search_filter` VALUES ('8', '4', 'http://news.sohu.com/');
-INSERT INTO `search_filter` VALUES ('9', '5', '.ifeng.com');
-INSERT INTO `search_filter` VALUES ('10', '6', '.sina.com.cn');
+INSERT INTO `search_filter` VALUES ('9', '5', 'http://news.ifeng.com/');
+INSERT INTO `search_filter` VALUES ('10', '6', 'http://news.sina.com.cn/');
 INSERT INTO `search_filter` VALUES ('11', '0', 'http://');
 
 -- ----------------------------
@@ -77,7 +77,7 @@ CREATE TABLE `search_filter_abandon` (
   `strategy_id` int(10) DEFAULT NULL,
   `string` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Records of search_filter_abandon
@@ -95,6 +95,7 @@ INSERT INTO `search_filter_abandon` VALUES ('10', '3', 'photo');
 INSERT INTO `search_filter_abandon` VALUES ('11', '6', 'auto');
 INSERT INTO `search_filter_abandon` VALUES ('12', '1', 'fortune');
 INSERT INTO `search_filter_abandon` VALUES ('13', '1', 'audio');
+INSERT INTO `search_filter_abandon` VALUES ('14', '2', 'photo');
 
 -- ----------------------------
 -- Table structure for search_href
@@ -111,7 +112,7 @@ CREATE TABLE `search_href` (
   PRIMARY KEY (`id`),
   KEY `href` (`href`) USING BTREE,
   KEY `contentid` (`contentid`)
-) ENGINE=InnoDB AUTO_INCREMENT=2131733 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------
 -- Records of search_href

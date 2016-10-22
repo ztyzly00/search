@@ -260,6 +260,7 @@ class HrefSearcher {
             $p_content = addslashes($p_content);
             $title = WebUtils::toUtf8($title);
             $title = addslashes($title);
+            $title = trim($title);
         }
 
         if ($title && $p_content) {
@@ -271,8 +272,8 @@ class HrefSearcher {
             $exec_query = "update search_count set contentcount=contentcount+1";
             $this->mysql_obj->exec_query($exec_query);
         } else {
-            //$query = "insert into search_rubbish (`href`,`strategy_id`) values ('$this->curr_href',$this->strategy_id)";
-            //$this->mysql_obj->exec_query($query);
+            $query = "insert into search_rubbish (`href`,`strategy_id`) values ('$this->curr_href',$this->strategy_id)";
+            $this->mysql_obj->exec_query($query);
         }
     }
 
@@ -282,7 +283,10 @@ class HrefSearcher {
 
         $this->recordInfo($crawler);
 
-        /* 添加网页中的所有连接,用于下一步的抓取 */
+        /*
+         * 添加网页中的所有连接,用于下一步的抓取
+         * 当内存满了的时候也可以暂时放弃插入。全站的抓取还是要建立在无限内存的基础上
+         */
         $this->insertHref($crawler);
     }
 

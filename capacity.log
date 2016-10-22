@@ -45,8 +45,9 @@
 
     
 最新性能日志：
-    -> fork的时候获取pid_num间隔过短会造成redis性能抖动
-        ->已解决，还是搜狐站点导致性能抖动，一直搞不懂为何搜狐这么屌？谁来拯救我
-            ->原因是sohu的页面元素太过庞大，所以带宽瓶颈的情况下，浏览的页面变少,导入插入速度变慢
+    -> fork的时候获取pid_num间隔过短会造成redis性能抖动                   
+    
+    -> redis內存未满开始性能抖动，iotop查看swapin过高
+        ->已解决，关闭mysql key_buffer_size所占内存，linux swapoff，redis内存不swap
 
  */
