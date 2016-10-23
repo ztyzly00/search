@@ -36,7 +36,11 @@ for ($i = 0; $i < count($strategy_array); $i++) {
 $spider_href_num = array();
 while (true) {
 
-    sleep(2);
+    if (count($strategy_array) == 0) {
+        exit;
+    }
+
+    sleep(5);
 
     $xm_redis_obj = RedisFactory::createXmRedisInstance(1);
 
@@ -49,18 +53,18 @@ while (true) {
         if (isset($spider_href_num[$strategy_id])) {
             $prev_href_num = $spider_href_num[$strategy_id];
 
-            /* 待抓取队列已经枯竭 */
-            if (abs($curr_href_num - $prev_href_num) < 5 &&
-                    $curr_href_num < 10 &&
-                    $prev_href_num < 10) {
+            /* 待抓取队列已基本枯竭 */
+            if ($curr_href_num == 0 &&
+                    $prev_href_num == 0) {
 
                 /*
                  * 修改维护进程数 
                  * 废除老策略进程
                  * 将其他进程数增加（保持总进程数不变）
-                 * 
                  */
                 $redis_obj->set('spider_strategy_pid_num_' . $strategy_id, '0');
+                $xm_redis_obj->del('spider_href_set_' . $strategy_id);
+
                 for ($i = 0; $i < count($strategy_array); $i++) {
                     if ($strategy_array[$i] == $strategy_id) {
                         unset($strategy_array[$i]);
