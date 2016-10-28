@@ -5,6 +5,7 @@ namespace Model;
 use Core\MySql\Mysql_Model\XmMysqlObj;
 use Core\Redis\RedisFactory;
 use Model\Utils\WebUtils;
+use Goutte\Client;
 use Symfony\Component\DomCrawler\Crawler;
 
 /**
@@ -71,6 +72,8 @@ class HrefSearcher {
      * @var type 
      */
     private $curl_handle;
+    private $client;
+    private $reg_shutdown_mutex;
 
     /**
      * 构造函数
@@ -82,17 +85,22 @@ class HrefSearcher {
         $this->redis_obj = RedisFactory::createRedisInstance();
         $this->xm_redis_obj = RedisFactory::createXmRedisInstance();
         $this->curl_init();
+        $this->client = new Client();
     }
 
-    /**
-     * 开始抓取
-     */
     public function startGrab() {
+        $i = 0;
         while (true) {
             $pid_num = $this->redis_obj->
                     get('spider_strategy_pid_num_' . $this->strategy_id);
+            $pid_num = 1;
             if ($pid_num) {
                 $this->Grab();
+                $i++;
+                if ($i == 30) {
+                    exit;
+                }
+                //exit;
             } else {
                 exit;
             }
@@ -100,25 +108,27 @@ class HrefSearcher {
     }
 
     public function Grab() {
+
         $curr_href = $this->getCurrHref();
+
+        register_shutdown_function(function() {
+            if (!$this->reg_shutdown_mutex) {
+                $this->xm_redis_obj->
+                        sAdd('spider_href_set_' . $this->strategy_id, $this->curr_href);
+                $this->reg_shutdown_mutex = 1;
+            }
+        });
+
         $this->grabHref($curr_href);
     }
 
-    /**
-     * 初始化curl
-     */
     public function curl_init() {
         $this->curl_handle = curl_init();
         curl_setopt($this->curl_handle, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($this->curl_handle, CURLOPT_HEADER, 0);
-        curl_setopt($this->curl_handle, CURLOPT_TIMEOUT_MS, 3000);
+        curl_setopt($this->curl_handle, CURLOPT_TIMEOUT_MS, 1000);
     }
 
-    /**
-     * curl抓取
-     * @param type $href
-     * @return string
-     */
     public function curl_get($href) {
         curl_setopt($this->curl_handle, CURLOPT_URL, $href);
         $html = curl_exec($this->curl_handle);
@@ -131,18 +141,17 @@ class HrefSearcher {
         return $html;
     }
 
-    /**
-     * 抓取并处理连接内容
-     * @param type $curr_href
-     * @return type
-     */
     public function grabHref($curr_href) {
+
         $html = $this->curl_get($curr_href);
         if ($html == 'error') {
             return;
         }
         $crawler = new Crawler($html);
+//        $crawler = $this->client->request('GET', $curr_href);
+
         $this->recordInfo($crawler);
+
         $this->insertHref($crawler);
     }
 
