@@ -35,6 +35,12 @@ class HrefSearcher {
     private $strategy_id;
 
     /**
+     * 策略call方式缓存
+     * @var type 
+     */
+    private $strategy_name;
+
+    /**
      * 过滤字符串数组
      * @var type 
      */
@@ -65,6 +71,7 @@ class HrefSearcher {
      * @var type 
      */
     private $client;
+    private $reg_shutdown_mutex;
 
     /**
      * 构造函数
@@ -79,12 +86,18 @@ class HrefSearcher {
     }
 
     public function startGrab() {
-
+        $i = 0;
         while (true) {
             $pid_num = $this->redis_obj->
                     get('spider_strategy_pid_num_' . $this->strategy_id);
+            $pid_num = 1;
             if ($pid_num) {
                 $this->Grab();
+                $i++;
+                if ($i == 30) {
+                    exit;
+                }
+                //exit;
             } else {
                 exit;
             }
@@ -96,8 +109,11 @@ class HrefSearcher {
         $curr_href = $this->getCurrHref();
 
         register_shutdown_function(function() {
-            $this->xm_redis_obj->
-                    sAdd('spider_href_set_' . $this->strategy_id, $this->curr_href);
+            if (!$this->reg_shutdown_mutex) {
+                $this->xm_redis_obj->
+                        sAdd('spider_href_set_' . $this->strategy_id, $this->curr_href);
+                $this->reg_shutdown_mutex = 1;
+            }
         });
 
         $this->grabHref($curr_href);
@@ -136,8 +152,8 @@ class HrefSearcher {
             $exec_query = "update search_count set contentcount=contentcount+1";
             $this->mysql_obj->exec_query($exec_query);
         } else {
-            $query = "insert into search_rubbish (`href`,`strategy_id`) values ('$this->curr_href',$this->strategy_id)";
-            $this->mysql_obj->exec_query($query);
+            //$query = "insert into search_rubbish (`href`,`strategy_id`) values ('$this->curr_href',$this->strategy_id)";
+            //$this->mysql_obj->exec_query($query);
         }
     }
 
@@ -307,10 +323,14 @@ class HrefSearcher {
      * @return type
      */
     public function getStrategy() {
-        $query = "select strategy from search_strategy where strategy_id = $this->strategy_id limit 1";
-        $strategy_name = $this->mysql_obj->fetch_assoc_one($query);
-        $strategy_name = $strategy_name['strategy'];
-        return "Model\\SpiderStrategy\\" . $strategy_name . "Strategy";
+
+        if (!$this->strategy_name) {
+            $query = "select strategy from search_strategy where strategy_id = $this->strategy_id limit 1";
+            $strategy_name = $this->mysql_obj->fetch_assoc_one($query);
+            $this->strategy_name = $strategy_name['strategy'];
+        }
+
+        return "Model\\SpiderStrategy\\" . $this->strategy_name . "Strategy";
     }
 
 }
