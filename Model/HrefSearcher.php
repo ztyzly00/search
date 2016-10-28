@@ -115,6 +115,21 @@ class HrefSearcher {
     }
 
     /**
+     * 抓取并处理连接内容
+     * @param type $curr_href
+     * @return type
+     */
+    public function grabHref($curr_href) {
+        $html = $this->curl_get($curr_href);
+        if ($html == 'error') {
+            return;
+        }
+        $crawler = new Crawler($html);
+        $this->recordInfo($crawler);
+        $this->insertHref($crawler);
+    }
+
+    /**
      * curl抓取
      * @param type $href
      * @return string
@@ -132,20 +147,9 @@ class HrefSearcher {
     }
 
     /**
-     * 抓取并处理连接内容
-     * @param type $curr_href
-     * @return type
+     * 记录网页信息
+     * @param type $crawler
      */
-    public function grabHref($curr_href) {
-        $html = $this->curl_get($curr_href);
-        if ($html == 'error') {
-            return;
-        }
-        $crawler = new Crawler($html);
-        $this->recordInfo($crawler);
-        $this->insertHref($crawler);
-    }
-
     public function recordInfo($crawler) {
 
         /* 分类添加新闻网页的新闻内容,title等内容 */

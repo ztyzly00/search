@@ -46,8 +46,11 @@
     
 最新性能日志：
     -> fork的时候获取pid_num间隔过短会造成redis性能抖动                   
-    
+        ->判断是register_shutdown_function造成的，自己实现curl错误监听，取消register_shutdown_function
+
     -> redis內存未满开始性能抖动，iotop查看swapin过高
         ->已解决，关闭mysql key_buffer_size所占内存，linux swapoff，redis内存不swap
-
+    
+    -> Goutte客户端库嵌套过深，倒是cpu浪费
+        ->自己实现curl，不用Goutte客户端的库
  */
