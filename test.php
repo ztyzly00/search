@@ -8,12 +8,11 @@ use Core\Redis\RedisFactory;
 use Core\MySql\Mysql_Model\XmMysqlObj;
 use Symfony\Component\DomCrawler\Crawler;
 
-$client = new Client();
-$crawler = $client->request('GET', "http://news.ifeng.com/world/detail_2009_09/07/1179502_0.shtml");
-$html = $crawler->getContent();
-
-print_r($html);
-
+//$client = new Client();
+//$crawler = $client->request('GET', "http://news.ifeng.com/world/detail_2009_09/07/1179502_0.shtml");
+//$html = $crawler->getContent();
+//
+//print_r($html);
 //
 //$curr_crawler = new Crawler($html);
 //
@@ -30,3 +29,8 @@ print_r($html);
 //$mysql_obj = XmMysqlObj::getInstance();
 //$mysql_obj->exec_query($query);
 
+$str = "http://news.qq.com/cross/20161024/6RW94H7V.html";
+
+if (strpos($str, "http") === FALSE) {
+    print_r("success");
+}

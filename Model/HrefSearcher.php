@@ -85,9 +85,20 @@ class HrefSearcher {
     }
 
     /**
+     * 初始化curl
+     */
+    public function curl_init() {
+        $this->curl_handle = curl_init();
+        curl_setopt($this->curl_handle, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($this->curl_handle, CURLOPT_HEADER, 0);
+        curl_setopt($this->curl_handle, CURLOPT_TIMEOUT_MS, 3000);
+    }
+
+    /**
      * 开始抓取
      */
     public function startGrab() {
+
         while (true) {
             $pid_num = $this->redis_obj->
                     get('spider_strategy_pid_num_' . $this->strategy_id);
@@ -102,16 +113,6 @@ class HrefSearcher {
     public function Grab() {
         $curr_href = $this->getCurrHref();
         $this->grabHref($curr_href);
-    }
-
-    /**
-     * 初始化curl
-     */
-    public function curl_init() {
-        $this->curl_handle = curl_init();
-        curl_setopt($this->curl_handle, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($this->curl_handle, CURLOPT_HEADER, 0);
-        curl_setopt($this->curl_handle, CURLOPT_TIMEOUT_MS, 3000);
     }
 
     /**
@@ -210,9 +211,12 @@ class HrefSearcher {
      * @return boolean
      */
     public function isHrefLegal(&$href) {
+//        $orgin_rr = $href;
+//        $query = "insert into search_rubbish (`href`,`strategy_id`) values ('$orgin_rr',$this->strategy_id)";
+//        $this->mysql_obj->exec_query($query);
 
-        /* 关键字符包含过滤 */
-        if (strpos($href, "#") || strpos($href, "?")) {
+        /* href过长过滤,数据库href唯一键值最长190 */
+        if (strlen($href) >= 190) {
             return 0;
         }
 
@@ -246,24 +250,26 @@ class HrefSearcher {
                     }
                 }
 
-                /* href中/../目录回退过滤 */
-                $explode_href_array = explode('/', $href);
-                while (in_array('..', $explode_href_array)) {
-                    for ($i = 0; $i < count($explode_href_array); $i++) {
-                        if ($explode_href_array[$i] == '..') {
-                            unset($explode_href_array[$i]);
-                            unset($explode_href_array[$i - 1]);
-                            $explode_href_array = array_values($explode_href_array);
-                            break;
+                /* /../目录回退 */
+                if (strpos($href, "..") !== FALSE) {
+                    $explode_href_array = explode('/', $href);
+                    while (in_array('..', $explode_href_array)) {
+                        for ($i = 0; $i < count($explode_href_array); $i++) {
+                            if ($explode_href_array[$i] == '..') {
+                                unset($explode_href_array[$i]);
+                                unset($explode_href_array[$i - 1]);
+                                $explode_href_array = array_values($explode_href_array);
+                                break;
+                            }
                         }
                     }
-                }
-                $href = '';
-                for ($i = 0; $i < count($explode_href_array); $i++) {
-                    if ($i != count($explode_href_array) - 1) {
-                        $href.=$explode_href_array[$i] . '/';
-                    } else {
-                        $href.=$explode_href_array[$i];
+                    $href = '';
+                    for ($i = 0; $i < count($explode_href_array); $i++) {
+                        if ($i != count($explode_href_array) - 1) {
+                            $href.=$explode_href_array[$i] . '/';
+                        } else {
+                            $href.=$explode_href_array[$i];
+                        }
                     }
                 }
             } else {
@@ -272,8 +278,7 @@ class HrefSearcher {
             }
         }
 
-        /* href过长过滤,数据库href唯一键值最长190 */
-        if (strlen($href) >= 190) {
+        if (strpos($href, "#") || strpos($href, "?")) {
             return 0;
         }
 
@@ -325,18 +330,15 @@ class HrefSearcher {
      * @return type
      */
     public function getCurrHref() {
-
-        $curr_href = $this->xm_redis_obj->sPop('spider_href_set_' . $this->strategy_id);
-
+        $curr_href = $this->xm_redis_obj
+                ->sPop('spider_href_set_' . $this->strategy_id);
         if (!$curr_href) {
-            $href = $this->mysql_obj->fetch_assoc_one("select href from search_orgin where strategy_id=$this->strategy_id limit 1");
+            $href = $this->mysql_obj
+                    ->fetch_assoc_one("select href from search_orgin where strategy_id=$this->strategy_id limit 1");
             $curr_href = $href['href'];
         }
-
         $curr_href = addslashes($curr_href);
-
         $this->curr_href = $curr_href;
-
         return $curr_href;
     }
 
