@@ -2,11 +2,21 @@
 
 require_once 'vendor/autoload.php';
 require_once 'autoload.php';
+require_once 'wwwww.php';
 
 use Goutte\Client;
 use Core\Redis\RedisFactory;
 use Core\MySql\Mysql_Model\XmMysqlObj;
 use Symfony\Component\DomCrawler\Crawler;
+use Core\MySql\DBFactory;
+
+$db_obj = DBFactory::getDb('localhost_scraper');
+
+$array = $db_obj->fetch_assoc("select * from search_count");
+
+print_r($array);
+
+//print_r($ztyzly[0]);
 
 //$client = new Client();
 //$crawler = $client->request('GET', "http://news.ifeng.com/world/detail_2009_09/07/1179502_0.shtml");
@@ -29,8 +39,8 @@ use Symfony\Component\DomCrawler\Crawler;
 //$mysql_obj = XmMysqlObj::getInstance();
 //$mysql_obj->exec_query($query);
 
-$str = "http://news.qq.com/cross/20161024/6RW94H7V.html";
-
-if (strpos($str, "http") === FALSE) {
-    print_r("success");
-}
+//$str = "http://news.qq.com/cross/20161024/6RW94H7V.html";
+//
+//if (strpos($str, "http") === FALSE) {
+//    print_r("success");
+//}

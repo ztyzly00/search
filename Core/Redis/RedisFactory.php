@@ -2,39 +2,37 @@
 
 namespace Core\Redis;
 
+use Core\Config\redisconfig;
+
 class RedisFactory {
 
-    private static $xm_redis_instance;
-    private static $redis_instance;
+    private static $db_pool = [];
+
+    public static function getDb($db_name, $opt) {
+        if ($opt == 0) {
+            if (array_key_exists($db_name, self::$db_pool)) {
+                return self::$db_pool[$db_name];
+            } else {
+                $redis = new \redis();
+                $redis->connect(redisconfig::$config[$db_name]['hostname']
+                        , redisconfig::$config[$db_name]['port']);
+                self::$db_pool[$db_name] = $redis;
+                return self::$db_pool[$db_name];
+            }
+        } else if ($opt == 1) {
+            $redis = new \redis();
+            $redis->connect(redisconfig::$config[$db_name]['hostname']
+                    , redisconfig::$config[$db_name]['port']);
+            return $redis;
+        }
+    }
 
     public static function createRedisInstance($opt = 0) {
-        if ($opt == 0) {
-            if (self::$redis_instance == NULL) {
-                self::$redis_instance = new \redis();
-                self::$redis_instance->connect('127.0.0.1', 6379);
-            }
-            return self::$redis_instance;
-        } else if ($opt == 1) {
-            $new_redis_instance = new \redis();
-            $new_redis_instance->connect('127.0.0.1', 6379);
-            return $new_redis_instance;
-        }
-        return self::$redis_instance;
+        return self::getDb('localhost', $opt);
     }
 
     public static function createXmRedisInstance($opt = 0) {
-        if ($opt == 0) {
-            if (self::$xm_redis_instance == NULL) {
-                self::$xm_redis_instance = new \redis();
-                self::$xm_redis_instance->connect('192.168.20.3', 6379);
-            }
-            return self::$xm_redis_instance;
-        } else if ($opt == 1) {
-            $new_redis_instance = new \redis();
-            $new_redis_instance->connect('192.168.20.3', 6379);
-            return $new_redis_instance;
-        }
-        return self::$redis_instance;
+        return self::getDb('20.3', $opt);
     }
 
 }

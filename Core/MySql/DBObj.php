@@ -1,27 +1,20 @@
 <?php
 
-namespace Core\MySql\Mysql_Model;
+namespace Core\MySql;
 
-use Core\MySql\Mysql_Interface;
-use Core\SqlLink;
-use Core\MySql\DBFactory;
+class DBObj {
 
-class XmMysqlObj implements Mysql_Interface\iMySqlObj {
-
-    private static $_instance;
     private $link;
 
-    public function __construct($opt = 0) {
-        $dataBaseInstance = SqlLink\SqlLinkFactory::createXmDatabase($opt);
-        $this->link = $dataBaseInstance->getDbLink();
-    }
-
     /**
-     * 获取本身对象的实例
-     * @return type
+     * 可以采取惰性连接，这里为了方便，不弄惰性加载
+     * @param type $database
      */
-    public static function getInstance($opt = 0) {
-        return DBFactory::getDb('localhost_scraper', $opt);
+    public function __construct($database) {
+        $this->link = mysqli_connect($database['hostname'], $database['username']
+                , $database['password'], $database['database']);
+        mysqli_query($this->link, 'set names utf8;');
+        mysqli_query($this->link, 'set character set \'utf8\'');
     }
 
     public function exec_query($query) {
