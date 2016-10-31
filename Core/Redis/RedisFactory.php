@@ -32,7 +32,7 @@ class RedisFactory {
     }
 
     public static function createXmRedisInstance($opt = 0) {
-        return self::getDb('20.3', $opt);
+        return self::getDb('localhost', $opt);
     }
 
 }

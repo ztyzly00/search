@@ -8,7 +8,7 @@ use Core\MySql\Mysql_Model\XmMysqlObj;
 use Core\Redis\RedisFactory;
 
 /* 总pid的数量 */
-$total_pid_num = 400;
+$total_pid_num = 200;
 
 $strategy_array = getStrategyArray();
 $origin_pid_num = intval($total_pid_num / count($strategy_array));
